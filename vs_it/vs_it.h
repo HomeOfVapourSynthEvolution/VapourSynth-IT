@@ -36,6 +36,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301, USA
 #define FI(name, n) env->m_frameInfo[clipFrame(n)].##name
 #define FII(n) env->m_frameInfo[clipFrame(n)]
 
+#define STR_HELPER(x) #x
+#define STR(x) STR_HELPER(x)
+#define MAX_WIDTH 8192
+
 static double GetF(double x) {
 	x = fabs(x);
 	return (x < 1.0) ? 1.0 - x : 0.0;

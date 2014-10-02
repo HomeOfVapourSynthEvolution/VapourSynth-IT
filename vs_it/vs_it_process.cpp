@@ -364,20 +364,20 @@ void IT::MakeSimpleBlurMap_YV12(IScriptEnvironment*env, int n)
 				pB = SYP(env, srcR, y + 1);
 			}
 			_asm {
-				mov eax, pC
-					mov ebx, pT
-					mov ecx, pB
-					mov edi, pD
+				mov rax, pC
+					mov rbx, pT
+					mov rcx, pB
+					mov rdi, pD
 					xor esi, esi
 					align 16
 				loopA:
-				movq mm0, [eax + esi]
-					movq mm1, [ebx + esi]
+				movq mm0, [rax + rsi]
+					movq mm1, [rbx + rsi]
 					movq mm2, mm0
 					movq mm3, mm1
 					MAKE_BLUR_MAP_ASM(mm0, mm1)
 
-					movq mm4, [ecx + esi]
+					movq mm4, [rcx + rsi]
 					movq mm1, mm4
 					MAKE_BLUR_MAP_ASM(mm2, mm4)
 
@@ -389,7 +389,7 @@ void IT::MakeSimpleBlurMap_YV12(IScriptEnvironment*env, int n)
 
 					lea esi, [esi + 8]
 					cmp esi, twidth
-					movntq[edi + esi - 8], mm0
+					movntq[rdi + rsi - 8], mm0
 					jl loopA
 			}
 		}
@@ -401,13 +401,13 @@ void IT::MakeSimpleBlurMap_YV12(IScriptEnvironment*env, int n)
 }
 
 #define MAKE_MOTION_MAP2_ASM_INIT(C, P) \
-	__asm mov eax, C \
-	__asm mov ebx, P
+	__asm mov rax, C \
+	__asm mov rbx, P
 
 #define MAKE_MOTION_MAP2_ASM(mmm, step) \
-	__asm movq mmm, [eax + esi*step] \
+	__asm movq mmm, [rax + rsi*step] \
 	__asm movq mm2, mmm \
-	__asm movq mm1, [ebx + esi*step] \
+	__asm movq mm1, [rbx + rsi*step] \
 	__asm psubusb mmm, mm1 \
 	__asm psubusb mm1, mm2 \
 	__asm por mmm, mm1
@@ -436,7 +436,7 @@ void IT::MakeMotionMap2Max_YV12(IScriptEnvironment*env, int n)
 			const unsigned char *pN_V = SYP(env, srcN, y, PLANAR_V);
 
 			_asm {
-				mov edi, pD
+				mov rdi, pD
 					xor esi, esi
 					align 16
 				loopA:
@@ -473,7 +473,7 @@ void IT::MakeMotionMap2Max_YV12(IScriptEnvironment*env, int n)
 
 					lea esi, [esi + 4]
 					cmp esi, twidth
-					movntq[edi + esi * 2 - 8], mm0
+					movntq[rdi + rsi * 2 - 8], mm0
 					jl loopA
 			}
 		}

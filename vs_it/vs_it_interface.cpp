@@ -44,15 +44,18 @@ const VSAPI *vsapi) {
 		"width must be mod 16");
 
 	FAIL_IF_ERROR(vi->height & 1,
-		"height must be even")
+		"height must be even");
+
+	FAIL_IF_ERROR(vi->width > MAX_WIDTH,
+		"width too large, exceeding " STR(MAX_WIDTH));
 	{
-		int fps = vsapi->propGetInt(in, "fps", 0, &err);
+		int fps = (int)vsapi->propGetInt(in, "fps", 0, &err);
 		if (err) { fps = 24; }
 
-		int threshold = vsapi->propGetInt(in, "threshold", 0, &err);
+		int threshold = (int)vsapi->propGetInt(in, "threshold", 0, &err);
 		if (err) { threshold = 20; }
 
-		int pthreshold = vsapi->propGetInt(in, "pthreshold", 0, &err);
+		int pthreshold = (int)vsapi->propGetInt(in, "pthreshold", 0, &err);
 		if (err) { pthreshold = 75; }
 
 		d = new IT(vi, node, fps, threshold, pthreshold, vsapi);

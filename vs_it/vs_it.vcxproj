@@ -91,7 +91,6 @@
     <ClCompile Include="vs_it_process.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\VapourSynth.h" />
     <ClInclude Include="IScriptEnvironment.h" />
     <ClInclude Include="vs_it.h" />
     <ClInclude Include="vs_it_interface.h" />

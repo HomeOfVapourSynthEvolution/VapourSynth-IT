@@ -42,26 +42,26 @@ void IT::ChooseBest(IScriptEnvironment* env, int n)
 }
 
 #define EVAL_IV_ASM_INIT(C, T, B) \
-	__asm mov eax, C \
-	__asm mov ebx, T \
-	__asm mov ecx, B
+	__asm mov rax, C \
+	__asm mov rbx, T \
+	__asm mov rcx, B
 
 #define EVAL_IV_ASM(mmm, step) \
-	__asm movq mmm, [eax + esi*step] \
-	__asm movq mm1, [ebx + esi*step] \
+	__asm movq mmm, [rax + rsi*step] \
+	__asm movq mm1, [rbx + rsi*step] \
 	__asm movq mm2, mmm \
 	__asm movq mm4, mmm \
-	__asm psubusb mmm, [ebx + esi*step] \
+	__asm psubusb mmm, [rbx + rsi*step] \
 	__asm psubusb mm1, mm2 \
-	__asm movq mm3, [ecx + esi*step] \
+	__asm movq mm3, [rcx + rsi*step] \
 	__asm por mmm, mm1 \
-	__asm movq mm1, [ebx + esi*step] \
+	__asm movq mm1, [rbx + rsi*step] \
 	__asm psubusb mm3, mm2 \
-	__asm pavgb mm1, [ecx + esi*step] \
-	__asm psubusb mm2, [ecx + esi*step] \
+	__asm pavgb mm1, [rcx + rsi*step] \
+	__asm psubusb mm2, [rcx + rsi*step] \
 	__asm psubusb mm4, mm1 \
 	__asm por mm2, mm3 \
-	__asm psubusb mm1, [eax + esi*step] \
+	__asm psubusb mm1, [rax + rsi*step] \
 	__asm pminub mmm, mm2 \
 	__asm por mm1, mm4 \
 	__asm pminub mmm, mm1
@@ -131,12 +131,12 @@ void IT::EvalIV_YV12(IScriptEnvironment *env, int n, const VSFrameRef * ref, lon
 				punpcklbw mm5, mm5
 				pmaxub mm0, mm5; mm0 < -max(y, max(u, v))
 
-				mov edx, peC
-				movq mm3, [edx + esi * 2]
-				mov edx, peT
-				pmaxub mm3, [edx + esi * 2]
-				mov edx, peB
-				pmaxub mm3, [edx + esi * 2]; mm3 <-max(peC[x], max(peT[x], peB[x]))
+				mov rdx, peC
+				movq mm3, [rdx + rsi * 2]
+				mov rdx, peT
+				pmaxub mm3, [rdx + rsi * 2]
+				mov rdx, peB
+				pmaxub mm3, [rdx + rsi * 2]; mm3 <-max(peC[x], max(peT[x], peB[x]))
 
 				psubusb mm0, mm3
 				psubusb mm0, mm3
@@ -178,16 +178,16 @@ void IT::EvalIV_YV12(IScriptEnvironment *env, int n, const VSFrameRef * ref, lon
 }
 
 #define MAKE_DE_MAP_ASM_INIT(C, TT, BB) \
-	__asm mov eax, C \
-	__asm mov ebx, TT \
-	__asm mov ecx, BB
+	__asm mov rax, C \
+	__asm mov rbx, TT \
+	__asm mov rcx, BB
 
 #define MAKE_DE_MAP_ASM(mmm, step, offset) \
-	__asm movq mm7, [ebx + esi*step + offset] \
-	__asm movq mmm, [eax + esi*step + offset] \
-	__asm pavgb mm7, [ecx + esi*step + offset] \
+	__asm movq mm7, [rbx + rsi*step + offset] \
+	__asm movq mmm, [rax + rsi*step + offset] \
+	__asm pavgb mm7, [rcx + rsi*step + offset] \
 	__asm psubusb mmm, mm7 \
-	__asm psubusb mm7, [eax + esi*step + offset] \
+	__asm psubusb mm7, [rax + rsi*step + offset] \
 	__asm por mmm, mm7
 
 ///////////////////////////////////////////////////////////////////////////
@@ -208,7 +208,7 @@ void IT::MakeDEmap_YV12(IScriptEnvironment*env, const VSFrameRef * ref, int offs
 		const unsigned char *pBB_V = SYP(env, ref, y + 2, PLANAR_V);
 		unsigned char *pED = env->m_edgeMap + y * width;
 		__asm {
-			mov edi, pED
+			mov rdi, pED
 				xor esi, esi
 				align 16
 			loopA:
@@ -230,9 +230,9 @@ void IT::MakeDEmap_YV12(IScriptEnvironment*env, const VSFrameRef * ref, int offs
 				pmaxub mm3, mm5
 
 				lea esi, [esi + 8]
-				movntq[edi + esi * 2 - 16], mm0
+				movntq[rdi + rsi * 2 - 16], mm0
 				cmp esi, twidth
-				movntq[edi + esi * 2 - 8], mm3
+				movntq[rdi + rsi * 2 - 8], mm3
 				jl loopA
 		}
 	}
@@ -266,8 +266,8 @@ void IT::MakeMotionMap_YV12(IScriptEnvironment*env, int n, bool flag)
 
 	PVideoFrame srcP = GetChildFrame(n - 1);
 	PVideoFrame srcC = GetChildFrame(n);
-	short bufP0[2048];
-	unsigned char bufP1[2048];
+	TS_ALIGN short bufP0[MAX_WIDTH];
+	TS_ALIGN unsigned char bufP1[MAX_WIDTH];
 	int pe0 = 0, po0 = 0, pe1 = 0, po1 = 0;
 	for (int yy = 16; yy < height - 16; ++yy) {
 		int y = yy;
@@ -276,37 +276,37 @@ void IT::MakeMotionMap_YV12(IScriptEnvironment*env, int n, bool flag)
 		{
 			_asm {
 				pxor mm7, mm7
-					mov eax, pC
-					mov ebx, pP
-					lea edi, bufP0
+					mov rax, pC
+					mov rcx, pP
+					lea rdi, bufP0
 					xor esi, esi
 					align 16
 				loopA:
-				prefetchnta[eax + esi + 16]
-					prefetchnta[ebx + esi + 16]
-					movd mm0, [eax + esi]
-					movd mm1, [ebx + esi]
+				prefetchnta[rax + rsi + 16]
+					prefetchnta[rcx + rsi + 16]
+					movd mm0, [rax + rsi]
+					movd mm1, [rcx + rsi]
 					punpcklbw mm0, mm7
 					punpcklbw mm1, mm7
 					lea esi, [esi + 4]
 					psubw mm0, mm1
 					cmp esi, twidth
-					movntq[edi + esi * 2 - 8], mm0
+					movntq[rdi + rsi * 2 - 8], mm0
 					jl loopA
 			}
 		}
 		{
 			_asm {
-				lea eax, bufP0
-					lea edi, bufP1
+				lea rax, bufP0
+					lea rdi, bufP1
 					mov esi, 8
 					align 16
 				loopB:
-				prefetchnta[eax + esi + 16]
-					movq mm0, [eax + esi * 2 - 2]
+				prefetchnta[rax + rsi + 16]
+					movq mm0, [rax + rsi * 2 - 2]
 					movq mm1, mm7
-					paddw mm0, [eax + esi * 2 + 2]
-					movq mm2, [eax + esi * 2]
+					paddw mm0, [rax + rsi * 2 + 2]
+					movq mm2, [rax + rsi * 2]
 					psubw mm0, mm2
 					movq mm3, mm7
 					psubw mm0, mm2
@@ -318,7 +318,7 @@ void IT::MakeMotionMap_YV12(IScriptEnvironment*env, int n, bool flag)
 					psubusw mm2, mm0
 					cmp esi, widthminus8
 					packuswb mm2, mm7
-					movd[edi + esi - 4], mm2
+					movd[rdi + rsi - 4], mm2
 					jl loopB
 			}
 		}
@@ -329,17 +329,17 @@ void IT::MakeMotionMap_YV12(IScriptEnvironment*env, int n, bool flag)
 			_asm {
 				movq mm5, mbTh
 					//				movq mm4,mask1
-					lea eax, bufP1
+					lea rax, bufP1
 					mov esi, 16
-					//				mov edi,pD
+					//				mov rdi,pD
 					pxor mm4, mm4
 					pxor mm3, mm3
 					align 16
 				loopC:
-				prefetchnta[eax + esi + 16]
-					movq mm0, [eax + esi - 1]
-					paddusb mm0, [eax + esi + 1]
-					paddusb mm0, [eax + esi]
+				prefetchnta[rax + rsi + 16]
+					movq mm0, [rax + rsi - 1]
+					paddusb mm0, [rax + rsi + 1]
+					paddusb mm0, [rax + rsi]
 					movq mm1, mm0
 					psubusb mm0, mm5
 					psubusb mm1, mbTh2
@@ -347,7 +347,7 @@ void IT::MakeMotionMap_YV12(IScriptEnvironment*env, int n, bool flag)
 					pcmpeqb mm1, mm7
 					pcmpeqb mm0, mm7
 					pcmpeqb mm1, mm7
-					//				movntq [edi+esi],mm0
+					//				movntq [rdi+rsi],mm0
 					lea esi, [esi + 8]
 					pand mm0, mask1
 					pand mm1, mask1
