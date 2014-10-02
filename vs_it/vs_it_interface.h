@@ -37,7 +37,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301, USA
 #define TS_FUNC_ALIGN __attribute__((force_align_arg_pointer))
 #endif
 
-#define IT_VERSION "0103.0.1"
+#define IT_VERSION "0103." "0.2"
 
 #define FAIL_IF_ERROR(cond, ...) {\
     if (cond) {\
