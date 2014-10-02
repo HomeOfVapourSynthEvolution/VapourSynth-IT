@@ -6,7 +6,7 @@ VapourSynth Plugin - Inverse Telecine (YV12 Only, IT-0051 base, IT_YV12-0103 bas
 
 - Original plugin: IT 0.051 by thejam79
 - Original plugin: IT_YV12 v0.1.03 by minamina
-- Original modify: 64bit/8k mod by anonymous from (avisynth64bitplugin)
+- Original modify: 64bit/8k mod by poodle from (avisynth64bitplugin)
 - All credits go to them.
 
 ## License 
