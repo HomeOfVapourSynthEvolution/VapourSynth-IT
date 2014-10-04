@@ -28,13 +28,13 @@ void VS_CC IT::Decide(IScriptEnvironment*env, int n)
 	int i;
     int min0 = env->m_frameInfo[clipFrame(base)].diffP0;
 	for (i = 1; i < 5; ++i) {
-		min0 = min(min0, env->m_frameInfo[clipFrame(base + i)].diffP0);
+        min0 = std::min(min0, env->m_frameInfo[clipFrame(base + i)].diffP0);
 	}
 	int mmin = AdjPara(50);
 
 	for (i = 0; i < 5; ++i) {
 		int m = env->m_frameInfo[clipFrame(base + i)].diffP0;
-		if (m >= max(mmin, min0) * 5) {
+        if (m >= std::max(mmin, min0) * 5) {
 			env->m_frameInfo[clipFrame(base + i)].mflag = '.';
 		}
 		else {
@@ -56,11 +56,11 @@ void VS_CC IT::Decide(IScriptEnvironment*env, int n)
 	if (ncf == 0) {
 		min0 = env->m_frameInfo[clipFrame(base)].diffS0;
 		for (i = 1; i < 5; ++i) {
-			min0 = min(min0, env->m_frameInfo[clipFrame(base + i)].diffS0);
+            min0 = std::min(min0, env->m_frameInfo[clipFrame(base + i)].diffS0);
 		}
 		for (i = 0; i < 5; ++i) {
 			int m = env->m_frameInfo[clipFrame(base + i)].diffS0;
-			if (m >= max(mmin2, min0) * 3) {
+            if (m >= std::max(mmin2, min0) * 3) {
 				env->m_frameInfo[clipFrame(base + i)].mflag = '.';
 			}
 			else {
@@ -233,7 +233,7 @@ void IT::DeintOneField_YV12(IScriptEnvironment*env, VSFrameRef* dst, int n)
 
 	unsigned char *pFieldMap;
 	pFieldMap = new unsigned char[width * height];
-	ZeroMemory(pFieldMap, width * height);
+    memset(pFieldMap, 0, width * height);
 	int x, y;
 	for (y = 0; y < height; y += 1)
 	{
@@ -299,7 +299,7 @@ void IT::DeintOneField_YV12(IScriptEnvironment*env, VSFrameRef* dst, int n)
 			if ((pFM[x - 1] == 1 || pFM[x] == 1 || pFM[x + 1] == 1) ||
 				(pFMB[x - 1] == 1 || pFMB[x] == 1 || pFMB[x + 1] == 1))
 			{
-				pDB[x] = BYTE((pC[x] + pBB[x] + 1) >> 1);
+				pDB[x] = (unsigned char)((pC[x] + pBB[x] + 1) >> 1);
 			}
 			else
 			{
@@ -308,8 +308,8 @@ void IT::DeintOneField_YV12(IScriptEnvironment*env, VSFrameRef* dst, int n)
 
 			if ((y >> 1) % 2)
 			{
-				pDB_U[x_half] = BYTE((pC_U[x_half] + pBB_U[x_half] + 1) >> 1);
-				pDB_V[x_half] = BYTE((pC_V[x_half] + pBB_V[x_half] + 1) >> 1);
+                pDB_U[x_half] = (unsigned char)((pC_U[x_half] + pBB_U[x_half] + 1) >> 1);
+                pDB_V[x_half] = (unsigned char)((pC_V[x_half] + pBB_V[x_half] + 1) >> 1);
 			}
 		}
 	}

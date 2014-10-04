@@ -23,10 +23,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301, USA
 #include <ctype.h>
 #include <stdio.h>
 #include <stdint.h>
-#include <windows.h>
 #include <VapourSynth.h>
 #include <VSHelper.h>
 #include "emmintrin.h"
+#include <algorithm>
 
 #ifdef _MSC_VER
 #define alignas(x) __declspec(align(x))

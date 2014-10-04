@@ -77,7 +77,7 @@ public:
 		vsapi->freeFrame(source);
 	}
     __forceinline const unsigned char* SYP(const VSFrameRef * pv, int y, int plane = 0) {
-		y = VSMAX(0, VSMIN(vi->height - 1, y));
+		y = std::max(0, std::min(vi->height - 1, y));
 		auto rPtr = vsapi->getReadPtr(pv, plane);
 		auto rStr = vsapi->getStride(pv, plane);
 		if (plane == 0)
@@ -86,7 +86,7 @@ public:
 			return rPtr + (((y >> 2) << 1) + (y % 2)) * rStr;
 	}
     __forceinline unsigned char* DYP(VSFrameRef * pv, int y, int plane = 0) {
-		y = VSMAX(0, VSMIN(vi->height - 1, y));
+		y = std::max(0, std::min(vi->height - 1, y));
 		auto wPtr = vsapi->getWritePtr(pv, plane);
 		auto wStr = vsapi->getStride(pv, plane);
 		if (plane == 0)
