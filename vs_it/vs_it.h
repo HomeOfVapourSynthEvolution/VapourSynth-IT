@@ -41,20 +41,21 @@ private:
     int m_iUsePrev, m_iUseNext;
     int m_iUseFrame;
 
-	int m_iPThreshold;
-	int m_iThreshold;
-	int m_iCounter;
-	int m_iFPS;
-	const VSFrameRef* m_PVOut[8];
-	int m_iPVOutIndex[8];
+    int m_iPThreshold;
+    int m_iThreshold;
+    int m_iCounter;
+    int m_iFPS;
+    const VSFrameRef* m_PVOut[8];
+    int m_iPVOutIndex[8];
 
-	int width;
-	int height;
-	VSFrameRef* m_pvf[32];
-	int m_ipvfIndex[32];
-	int m_iMaxFrames;
+    int width;
+    int height;
+    VSFrameRef* m_pvf[32];
+    int m_ipvfIndex[32];
+    int m_iMaxFrames;
 
-    __forceinline const unsigned char* SYP(const VSFrameRef * pv, const VSAPI *vsapi, int y, int plane = 0) {
+    __forceinline const unsigned char* SYP(const VSFrameRef * pv, const VSAPI *vsapi, int y, int plane = 0)
+    {
         y = std::max(0, std::min(vi->height - 1, y));
         auto rPtr = vsapi->getReadPtr(pv, plane);
         auto rStr = vsapi->getStride(pv, plane);
@@ -63,7 +64,8 @@ private:
         else
             return rPtr + (((y >> 2) << 1) + (y % 2)) * rStr;
     }
-    __forceinline unsigned char* DYP(VSFrameRef * pv, const VSAPI *vsapi, int y, int plane = 0) {
+    __forceinline unsigned char* DYP(VSFrameRef * pv, const VSAPI *vsapi, int y, int plane = 0)
+    {
         y = std::max(0, std::min(vi->height - 1, y));
         auto wPtr = vsapi->getWritePtr(pv, plane);
         auto wStr = vsapi->getStride(pv, plane);
@@ -74,38 +76,15 @@ private:
     }
 
 public:
-	const VSVideoInfo* vi;
-	VSNodeRef * node;
-	IT(VSVideoInfo * vi,
-		VSNodeRef * node,
-		int _fps,
-		int _threshold,
-		int _pthreshold,
-		const VSAPI *vsapi);
-	int AdjPara(int v) {
-		return (((v * width) / 720) * height) / 480;
-	}
-    __forceinline int clipFrame(int n) {
-		return std::max(0, std::min(n, m_iMaxFrames - 1));
-	}
-    __forceinline int clipX(int x) {
-        x = std::max(0, std::min(width - 1, x));
-		return x;
-	}
-    __forceinline int clipY(int y) {
-        return std::max(0, std::min(height - 1, y));
-	}
-    __forceinline int clipYH(int y) {
-        return std::max(0, std::min((height >> 1) - 1, y));
-	}
-    __forceinline unsigned char* B2YP(unsigned char *dst, int y) {
-        y = std::max(0, std::min(height - 1, y));
-		return dst + y * width * 2;
-	}
-    __forceinline unsigned char* BYP(unsigned char *dst, int y) {
-        y = std::max(0, std::min(height - 1, y));
-		return dst + y * width;
-	}
+    const VSVideoInfo* vi;
+    VSNodeRef * node;
+    IT(VSVideoInfo * vi,
+    VSNodeRef * node,
+    int _fps,
+    int _threshold,
+    int _pthreshold,
+    const VSAPI *vsapi);
+
     void VS_CC GetFramePre(int n, VSFrameContext *frameCtx, const VSAPI *vsapi);
     const VSFrameRef* VS_CC GetFrame(int n, VSCore *core, const VSAPI *vsapi);
     const VSFrameRef* VS_CC MakeOutput(int n, VSFrameRef* dst, const VSAPI *vsapi);
@@ -124,4 +103,35 @@ public:
     void VS_CC SetFT(int base, int n, char c);
     bool VS_CC DrawPrevFrame(int n, VSFrameRef * dst, const VSAPI *vsapi);
 
+    int AdjPara(int v)
+    {
+        return (((v * width) / 720) * height) / 480;
+    }
+    __forceinline int clipFrame(int n)
+    {
+        return std::max(0, std::min(n, m_iMaxFrames - 1));
+    }
+    __forceinline int clipX(int x)
+    {
+        x = std::max(0, std::min(width - 1, x));
+        return x;
+    }
+    __forceinline int clipY(int y)
+    {
+        return std::max(0, std::min(height - 1, y));
+    }
+    __forceinline int clipYH(int y)
+    {
+        return std::max(0, std::min((height >> 1) - 1, y));
+    }
+    __forceinline unsigned char* B2YP(unsigned char *dst, int y)
+    {
+        y = std::max(0, std::min(height - 1, y));
+        return dst + y * width * 2;
+    }
+    __forceinline unsigned char* BYP(unsigned char *dst, int y)
+    {
+        y = std::max(0, std::min(height - 1, y));
+        return dst + y * width;
+    }
 };

@@ -22,41 +22,40 @@ typedef IT INSTANCE;
 
 void VS_CC itInit(VSMap *in, VSMap *out, void **instanceData, VSNode *node, VSCore *core, const VSAPI *vsapi)
 {
-	INSTANCE *d = *(INSTANCE**)instanceData;
-	vsapi->setVideoInfo(d->vi, 1, node);
+    INSTANCE *d = *(INSTANCE**)instanceData;
+    vsapi->setVideoInfo(d->vi, 1, node);
 }
 
 void VS_CC itFree(void *instanceData, VSCore *core, const VSAPI *vsapi)
 {
-	INSTANCE *d = (INSTANCE*)instanceData;
-	vsapi->freeNode(d->node);
-	delete d;
+    INSTANCE *d = (INSTANCE*)instanceData;
+    vsapi->freeNode(d->node);
+    delete d;
 }
 
 const VSFrameRef *VS_CC itGetFrame(int n, int activationReason, void **instanceData, void **frameData,
                                    VSFrameContext *frameCtx, VSCore *core, const VSAPI *vsapi)
 {
-	INSTANCE *d = *(INSTANCE**)instanceData;
-	if (activationReason == arInitial) {
-		d->GetFramePre(n, frameCtx, vsapi);
-		return NULL;
-	}
-	if (activationReason != arAllFramesReady) {
-		return NULL;
-	}
+    INSTANCE *d = *(INSTANCE**)instanceData;
+    if (activationReason == arInitial) {
+        d->GetFramePre(n, frameCtx, vsapi);
+        return NULL;
+    }
+    if (activationReason != arAllFramesReady)
+        return NULL;
 
-	return d->GetFrame(n, core, vsapi);
+    return d->GetFrame(n, core, vsapi);
 }
 
 static void VS_CC itCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core, const VSAPI *vsapi)
 {
-	int err;
-	char msg_buff[256] = "IT(" IT_VERSION "): ";
-	char *msg = msg_buff + strlen(msg_buff);
+    int err;
+    char msg_buff[256] = "IT(" IT_VERSION "): ";
+    char *msg = msg_buff + strlen(msg_buff);
 
-	VSNodeRef * node = vsapi->propGetNode(in, "clip", 0, 0);
-	VSVideoInfo * vi = new VSVideoInfo;
-	*vi = *vsapi->getVideoInfo(node);
+    VSNodeRef * node = vsapi->propGetNode(in, "clip", 0, 0);
+    VSVideoInfo * vi = new VSVideoInfo;
+    *vi = *vsapi->getVideoInfo(node);
 
     if (!vi->format || vi->width == 0 || vi->height == 0) {
         vsapi->freeNode(node);
@@ -102,18 +101,23 @@ static void VS_CC itCreate(const VSMap *in, VSMap *out, void *userData, VSCore *
     if (err)
         pthreshold = 75;
 
-	INSTANCE * d = new IT(vi, node, fps, threshold, pthreshold, vsapi);
+    INSTANCE * d = new IT(vi, node, fps, threshold, pthreshold, vsapi);
 
-	vsapi->createFilter(in, out, "it", itInit, itGetFrame, itFree, fmParallel, 0, d, core);
-	return;
+    vsapi->createFilter(in, out, "it", itInit, itGetFrame, itFree, fmParallel, 0, d, core);
+    return;
 }
 
 VS_EXTERNAL_API(void) VapourSynthPluginInit(VSConfigPlugin configFunc, VSRegisterFunction registerFunc, VSPlugin *plugin)
 {
-	configFunc("in.7086.it", "it",
-		"VapourSynth IVTC Filter v" IT_VERSION,
-		VAPOURSYNTH_API_VERSION, 1, plugin);
-	registerFunc("it",
-		"clip:clip;fps:int:opt;threshold:int:opt;pthreshold:int:opt;",
-		itCreate, 0, plugin);
+    configFunc("in.7086.it",
+               "it",
+               "VapourSynth IVTC Filter v" IT_VERSION,
+               VAPOURSYNTH_API_VERSION,
+               1,
+               plugin);
+    registerFunc("it",
+                 "clip:clip;fps:int:opt;threshold:int:opt;pthreshold:int:opt;",
+                 itCreate,
+                 0,
+                 plugin);
 }
