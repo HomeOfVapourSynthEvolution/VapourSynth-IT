@@ -19,10 +19,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301, USA
 #pragma once
 #include "vs_it_interface.h"
 
-enum REFTYPE;
-
-class CFrameInfo {
-public:
+struct CFrameInfo {
 	char pos;
 	char match;
 	char matchAcc;
@@ -37,17 +34,10 @@ public:
 	long ivPC, ivPP, ivPN;
 };
 
-class CTFblockInfo {
-public:
+struct CTFblockInfo {
 	int cfi;
 	char level;
 	char itype;
-};
-
-enum {
-	PLANAR_Y,
-	PLANAR_U,
-	PLANAR_V
 };
 
 class IScriptEnvironment
@@ -86,23 +76,20 @@ public:
 	void FreeFrame(const VSFrameRef* source) {
 		vsapi->freeFrame(source);
 	}
-	void BitBlt(void* dstp, int dst_pitch, const void* srcp, int src_pitch, int row_size, int height) {
-		vs_bitblt(dstp, dst_pitch, srcp, src_pitch, row_size, height);
-	}
-	inline const unsigned char* SYP(const VSFrameRef * pv, int y, int plane = PLANAR_Y) {
+    __forceinline const unsigned char* SYP(const VSFrameRef * pv, int y, int plane = 0) {
 		y = VSMAX(0, VSMIN(vi->height - 1, y));
 		auto rPtr = vsapi->getReadPtr(pv, plane);
 		auto rStr = vsapi->getStride(pv, plane);
-		if (plane == PLANAR_Y)
+		if (plane == 0)
 			return rPtr + y * rStr;
 		else
 			return rPtr + (((y >> 2) << 1) + (y % 2)) * rStr;
 	}
-	inline unsigned char* DYP(VSFrameRef * pv, int y, int plane = PLANAR_Y) {
+    __forceinline unsigned char* DYP(VSFrameRef * pv, int y, int plane = 0) {
 		y = VSMAX(0, VSMIN(vi->height - 1, y));
 		auto wPtr = vsapi->getWritePtr(pv, plane);
 		auto wStr = vsapi->getStride(pv, plane);
-		if (plane == PLANAR_Y)
+		if (plane == 0)
 			return wPtr + y * wStr;
 		else
 			return wPtr + (((y >> 2) << 1) + (y % 2)) * wStr;

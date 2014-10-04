@@ -29,25 +29,14 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301, USA
 #include "emmintrin.h"
 
 #ifdef _MSC_VER
-#define snprintf(a,b,c) _snprintf_s(a,b,b,c)
-#define stricmp _stricmp
-#define TS_ALIGN __declspec(align(16))
-#define TS_FUNC_ALIGN
+#define alignas(x) __declspec(align(x))
+#define ALIGNED_ARRAY(decl, alignment) alignas(alignment) decl
 #else
-#define TS_ALIGN __attribute__((aligned(16)))
-#define TS_FUNC_ALIGN __attribute__((force_align_arg_pointer))
+#define __forceinline inline
+#define ALIGNED_ARRAY(decl, alignment) __attribute__((aligned(16))) decl
 #endif
 
-#define PARAM_INT(name, def) int name = int64ToIntS(vsapi->propGetInt(in, #name, 0, &err)); if (err) { name = def; }
-
 #define IT_VERSION "0103." "0.3"
-
-#define FAIL_IF_ERROR(cond, ...) {\
-    if (cond) {\
-        snprintf(msg, 200, __VA_ARGS__);\
-        goto fail;\
-    }\
-}
 
 #if !defined(_WIN64)
 #define rax	eax
