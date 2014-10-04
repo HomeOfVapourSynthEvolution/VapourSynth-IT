@@ -81,7 +81,7 @@ void IT::EvalIV_YV12(int n, const VSFrameRef * ref, const VSAPI *vsapi, long &co
 	MakeDEmap_YV12(ref, vsapi, 1);
 
 	const int widthminus16 = (width - 16) >> 1;
-	int sum = 0, sum2 = 0; //, sumS = 0;
+	int sum = 0, sum2 = 0;
 	for (int yy = 16; yy < height - 16; yy += 2) {
 		int y;
 		y = yy + 1;
@@ -99,17 +99,16 @@ void IT::EvalIV_YV12(int n, const VSFrameRef * ref, const VSAPI *vsapi, long &co
 		const unsigned char *peC = &m_edgeMap[clipY(y) * width];
 		const unsigned char *peB = &m_edgeMap[clipY(y + 1) * width];
 
-		//		unsigned char *pmW = m_pImap + width * y;
 		__asm {
 			pxor mm7, mm7
-				//			mov edi,pmW
-				mov esi, 16
 
-				movq rsum, mm7
-				movq psum, mm7
-				movq psum0, mm7
-				movq psum1, mm7
-				align 16
+			mov esi, 16
+
+			movq rsum, mm7
+			movq psum, mm7
+			movq psum0, mm7
+			movq psum1, mm7
+			align 16
 			loopB:
 			EVAL_IV_ASM_INIT(pC, pT, pB)
 				EVAL_IV_ASM(mm0, 2)
@@ -155,8 +154,6 @@ void IT::EvalIV_YV12(int n, const VSFrameRef * ref, const VSAPI *vsapi, long &co
 		}
 		sum += rsum[0] + rsum[1] + rsum[2] + rsum[3] + rsum[4] + rsum[5] + rsum[6] + rsum[7];
 		sum2 += psum[0] + psum[1] + psum[2] + psum[3] + psum[4] + psum[5] + psum[6] + psum[7];
-		//		sum2 += psum0[0] + psum0[1] + psum0[2] + psum0[3]; 
-		//		sum2 += psum1[0] + psum1[1] + psum1[2] + psum1[3]; 
 		if (sum > m_iPThreshold) {
 			sum = m_iPThreshold;
 			break;
@@ -316,43 +313,41 @@ void IT::MakeMotionMap_YV12(int n, bool flag, const VSAPI *vsapi)
 		}
 		int tsum = 0, tsum1 = 0;
 		{
-			//			unsigned char sum[8];
-			//			unsigned char sum[8];
 			_asm {
 				movq mm5, mbTh
-					//				movq mm4,mask1
-					lea rax, bufP1
-					mov esi, 16
-					//				mov rdi,pD
-					pxor mm4, mm4
-					pxor mm3, mm3
-					align 16
+
+				lea rax, bufP1
+				mov esi, 16
+
+				pxor mm4, mm4
+				pxor mm3, mm3
+				align 16
 				loopC:
 				prefetchnta[rax + rsi + 16]
-					movq mm0, [rax + rsi - 1]
-					paddusb mm0, [rax + rsi + 1]
-					paddusb mm0, [rax + rsi]
-					movq mm1, mm0
-					psubusb mm0, mm5
-					psubusb mm1, mbTh2
-					pcmpeqb mm0, mm7
-					pcmpeqb mm1, mm7
-					pcmpeqb mm0, mm7
-					pcmpeqb mm1, mm7
-					//				movntq [rdi+rsi],mm0
-					lea esi, [esi + 8]
-					pand mm0, mask1
-					pand mm1, mask1
-					cmp esi, widthminus16
-					paddb mm4, mm0
-					paddb mm3, mm1
-					jl loopC
+				movq mm0, [rax + rsi - 1]
+				paddusb mm0, [rax + rsi + 1]
+				paddusb mm0, [rax + rsi]
+				movq mm1, mm0
+				psubusb mm0, mm5
+				psubusb mm1, mbTh2
+				pcmpeqb mm0, mm7
+				pcmpeqb mm1, mm7
+				pcmpeqb mm0, mm7
+				pcmpeqb mm1, mm7
 
-					psadbw mm4, mm7
-					movd tsum, mm4
+				lea esi, [esi + 8]
+				pand mm0, mask1
+				pand mm1, mask1
+				cmp esi, widthminus16
+				paddb mm4, mm0
+				paddb mm3, mm1
+				jl loopC
 
-					psadbw mm3, mm7
-					movd tsum1, mm3
+				psadbw mm4, mm7
+				movd tsum, mm4
+
+				psadbw mm3, mm7
+				movd tsum1, mm3
 			}
 			if ((y & 1) == 0) {
 				pe0 += tsum;

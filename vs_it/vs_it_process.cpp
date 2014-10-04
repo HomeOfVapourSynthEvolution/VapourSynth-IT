@@ -41,7 +41,6 @@ void VS_CC IT::Decide(int n)
 			m_frameInfo[clipFrame(base + i)].mflag = '+';
 		}
 	}
-	//  const int motion1 = 100;
 
 	int ncf = 0;
 	int cfi = -1;
@@ -258,12 +257,12 @@ void IT::DeintOneField_YV12(int n, VSFrameRef* dst, const VSAPI *vsapi)
 		}
 	}
 
-	const int nPitchSrc = vsapi->getStride(srcC, 0); // srcC->GetPitch();
-	const int nPitchSrcU = vsapi->getStride(srcC, 1); // srcC->GetPitch(PLANAR_U);
-	const int nPitchDst = vsapi->getStride(dst, 0); // dst->GetPitch();
-	const int nRowSizeDst = width; // dst->GetRowSize(); DIVIDE BY SIZEOF(T)
-	const int nPitchDstU = vsapi->getStride(dst, 1); // dst->GetPitch(PLANAR_U);
-	const int nRowSizeDstU = width >> vi->format->subSamplingW; // dst->GetRowSize(PLANAR_U); DIVIDE BY SIZEOF(T)
+	const int nPitchSrc = vsapi->getStride(srcC, 0);
+	const int nPitchSrcU = vsapi->getStride(srcC, 1);
+	const int nPitchDst = vsapi->getStride(dst, 0);
+	const int nRowSizeDst = width;
+	const int nPitchDstU = vsapi->getStride(dst, 1);
+	const int nRowSizeDstU = width >> vi->format->subSamplingW;
 
 	for (y = 0; y < height; y += 2) {
 		pT = SYP(srcR, vsapi, y - 1);
@@ -420,10 +419,8 @@ void IT::MakeMotionMap2Max_YV12(int n, const VSAPI *vsapi)
     const VSFrameRef* srcC = vsapi->getFrame(n, node, nullptr, 0);
     const VSFrameRef* srcN = vsapi->getFrame(n + 1, node, nullptr, 0);
 
-	//	for(int y = 0; y < height; y += 2) {
 	for (int y = 0; y < height; y++) {
 		unsigned char *pD = m_motionMap4DIMax + y * width;
-		//		unsigned char *pDB = m_motionMap4DIMax + (y + 1) * width;
 		{
 			const unsigned char *pC = SYP(srcC, vsapi, y);
             const unsigned char *pP = SYP(srcP, vsapi, y);
@@ -468,7 +465,6 @@ void IT::MakeMotionMap2Max_YV12(int n, const VSAPI *vsapi)
 					punpcklbw mm3, mm3
 					pmaxub mm5, mm3
 
-					//				pminub mm0,mm5
 					pmaxub mm0, mm5
 
 					lea esi, [esi + 4]
