@@ -1,6 +1,6 @@
 # VapourSynth-IT
 
-VS_IT.dll v0103.0.2 Copyright(C) 2002 thejam79, 2003 minamina, 2014 msg7086
+VS_IT.dll v0103.0.3 Copyright(C) 2002 thejam79, 2003 minamina, 2014 msg7086
 
 VapourSynth Plugin - Inverse Telecine (YV12 Only, IT-0051 base, IT_YV12-0103 base)
 
@@ -59,3 +59,9 @@ This is a partial porting.
 This plugin can only be compiled by VC++ due to inline asm and macro expanding problem.
 
 You are welcome to send PR if you can rewrite them into GCC-compatible code, or help to improve the code quality.
+
+## ChangeLog
+
+v0.3  14/10/03 Code cleanup, multiple instances problem fixed
+v0.2  14/10/01 64-bit/8k mod patched
+v0.1  14/09/30 Initial porting
