@@ -76,5 +76,3 @@ struct CTFblockInfo {
     char level;
     char itype;
 };
-
-#include "vs_it.h"
