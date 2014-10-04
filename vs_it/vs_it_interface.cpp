@@ -19,17 +19,15 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301, USA
 #include "vs_it_interface.h"
 #include "vs_it.h"
 
-typedef IT INSTANCE;
-
 void VS_CC itInit(VSMap *in, VSMap *out, void **instanceData, VSNode *node, VSCore *core, const VSAPI *vsapi)
 {
-    INSTANCE *d = *(INSTANCE**)instanceData;
+    IT *d = (IT*)*instanceData;
     vsapi->setVideoInfo(d->vi, 1, node);
 }
 
 void VS_CC itFree(void *instanceData, VSCore *core, const VSAPI *vsapi)
 {
-    INSTANCE *d = (INSTANCE*)instanceData;
+    IT *d = (IT*)instanceData;
     vsapi->freeNode(d->node);
     delete d;
 }
@@ -37,7 +35,7 @@ void VS_CC itFree(void *instanceData, VSCore *core, const VSAPI *vsapi)
 const VSFrameRef *VS_CC itGetFrame(int n, int activationReason, void **instanceData, void **frameData,
                                    VSFrameContext *frameCtx, VSCore *core, const VSAPI *vsapi)
 {
-    INSTANCE *d = *(INSTANCE**)instanceData;
+    IT *d = (IT*)*instanceData;
     if (activationReason == arInitial) {
         d->GetFramePre(n, frameCtx, vsapi);
         return NULL;
@@ -102,7 +100,7 @@ static void VS_CC itCreate(const VSMap *in, VSMap *out, void *userData, VSCore *
     if (err)
         pthreshold = 75;
 
-    INSTANCE * d = new IT(vi, node, fps, threshold, pthreshold, vsapi);
+    IT * d = new IT(vi, node, fps, threshold, pthreshold, vsapi);
 
     vsapi->createFilter(in, out, "it", itInit, itGetFrame, itFree, fmParallel, 0, d, core);
     return;
