@@ -56,5 +56,25 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301, USA
 #define rbp	rbp
 #endif
 
-#include "IScriptEnvironment.h"
+struct CFrameInfo {
+    char pos;
+    char match;
+    char matchAcc;
+    char ip;
+    char out;
+    char mflag;
+    int diffP0;
+    int diffP1;
+    int diffS0;
+    int diffS1;
+    long ivC, ivP, ivN, ivM;
+    long ivPC, ivPP, ivPN;
+};
+
+struct CTFblockInfo {
+    int cfi;
+    char level;
+    char itype;
+};
+
 #include "vs_it.h"
