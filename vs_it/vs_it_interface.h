@@ -16,8 +16,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301, USA.
 */
 
-#ifndef __VS_IT_INTERFACE_H__
-#define __VS_IT_INTERFACE_H__
+#pragma once
 #include <string.h>
 #include <math.h>
 #include <stdlib.h>
@@ -26,22 +25,26 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301, USA
 #include <stdint.h>
 #include <windows.h>
 #include <VapourSynth.h>
+#include <VSHelper.h>
+#include "emmintrin.h"
 
 #ifdef _MSC_VER
 #define snprintf(a,b,c) _snprintf_s(a,b,b,c)
+#define stricmp _stricmp
 #define TS_ALIGN __declspec(align(16))
 #define TS_FUNC_ALIGN
-#define stricmp _stricmp
 #else
 #define TS_ALIGN __attribute__((aligned(16)))
 #define TS_FUNC_ALIGN __attribute__((force_align_arg_pointer))
 #endif
 
-#define IT_VERSION "0103." "0.2"
+#define PARAM_INT(name, def) int name = int64ToIntS(vsapi->propGetInt(in, #name, 0, &err)); if (err) { name = def; }
+
+#define IT_VERSION "0103." "0.3"
 
 #define FAIL_IF_ERROR(cond, ...) {\
     if (cond) {\
-        snprintf(msg, 235, __VA_ARGS__);\
+        snprintf(msg, 200, __VA_ARGS__);\
         goto fail;\
     }\
 }
@@ -64,6 +67,5 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301, USA
 #define rbp	rbp
 #endif
 
-class IT;
-
-#endif
+#include "IScriptEnvironment.h"
+#include "vs_it.h"

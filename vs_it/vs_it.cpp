@@ -34,8 +34,6 @@ IT::IT(VSVideoInfo * vi,
 	m_iCounter = 0;
 	width = vi->width;
 	height = vi->height;
-	m_bSwap = false;
-	m_iField = false;
 
 	for (int k = 0; k < 32; ++k) {
 		m_pvf[k] = 0;

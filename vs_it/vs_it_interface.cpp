@@ -17,13 +17,42 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301, USA
 */
 
 #include "vs_it_interface.h"
-#include "vs_it.h"
 
-static IT *d = NULL;
+typedef IT INSTANCE;
+
+void VS_CC
+itInit(VSMap *in, VSMap *out, void **instanceData, VSNode *node, VSCore *core, const VSAPI *vsapi)
+{
+	INSTANCE *d = *(INSTANCE**)instanceData;
+	vsapi->setVideoInfo(d->vi, 1, node);
+}
+
+void VS_CC
+itFree(void *instanceData, VSCore *core, const VSAPI *vsapi)
+{
+	INSTANCE *d = (INSTANCE*)instanceData;
+	vsapi->freeNode(d->node);
+	delete d;
+}
+
+const VSFrameRef *VS_CC
+itGetFrame(int n, int activationReason, void **instanceData, void **frameData, VSFrameContext *frameCtx, VSCore *core, const VSAPI *vsapi)
+{
+	INSTANCE *d = *(INSTANCE**)instanceData;
+	IScriptEnvironment env(frameCtx, core, vsapi, d->node);
+	if (activationReason == arInitial) {
+		d->GetFramePre(&env, n);
+		return NULL;
+	}
+	if (activationReason != arAllFramesReady) {
+		return NULL;
+	}
+
+	return d->GetFrame(&env, n);
+}
 
 static void VS_CC
-itCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core,
-const VSAPI *vsapi) {
+itCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core, const VSAPI *vsapi) {
 	int err;
 	char msg_buff[256] = "IT(" IT_VERSION "): ";
 	char *msg = msg_buff + strlen(msg_buff);
@@ -48,54 +77,19 @@ const VSAPI *vsapi) {
 
 	FAIL_IF_ERROR(vi->width > MAX_WIDTH,
 		"width too large, exceeding " STR(MAX_WIDTH));
-	{
-		int fps = (int)vsapi->propGetInt(in, "fps", 0, &err);
-		if (err) { fps = 24; }
 
-		int threshold = (int)vsapi->propGetInt(in, "threshold", 0, &err);
-		if (err) { threshold = 20; }
+	PARAM_INT(fps, 24);
+	PARAM_INT(threshold, 20);
+	PARAM_INT(pthreshold, 75);
 
-		int pthreshold = (int)vsapi->propGetInt(in, "pthreshold", 0, &err);
-		if (err) { pthreshold = 75; }
+	INSTANCE * d = new IT(vi, node, fps, threshold, pthreshold, vsapi);
 
-		d = new IT(vi, node, fps, threshold, pthreshold, vsapi);
-	}
-	vsapi->createFilter(in, out, "it", itInit,
-		itGetFrame, itFree, fmParallel,
-		0, NULL, core);
+	vsapi->createFilter(in, out, "it", itInit, itGetFrame, itFree, fmParallel, 0, d, core);
 	return;
 
 fail:
 	vsapi->freeNode(node);
 	vsapi->setError(out, msg_buff);
-}
-
-void VS_CC
-itInit(VSMap *in, VSMap *out, void **instanceData, VSNode *node, VSCore *core, const VSAPI *vsapi)
-{
-	vsapi->setVideoInfo(d->vi, 1, node);
-}
-
-void VS_CC
-itFree(void *instanceData, VSCore *core, const VSAPI *vsapi)
-{
-	vsapi->freeNode(d->node);
-	delete d;
-}
-
-const VSFrameRef *VS_CC
-itGetFrame(int n, int activationReason, void **instanceData, void **frameData, VSFrameContext *frameCtx, VSCore *core, const VSAPI *vsapi)
-{
-	IScriptEnvironment env(frameCtx, core, vsapi);
-	if (activationReason == arInitial) {
-		d->GetFramePre(&env, n);
-		return NULL;
-	}
-	if (activationReason != arAllFramesReady) {
-		return NULL;
-	}
-
-	return d->GetFrame(&env, n);
 }
 
 VS_EXTERNAL_API(void)

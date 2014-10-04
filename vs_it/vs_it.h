@@ -16,17 +16,14 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301, USA.
 */
 
-#ifndef __VS_IT_H__
-#define __VS_IT_H__
-
+#pragma once
 #include "vs_it_interface.h"
-#include "IScriptEnvironment.h"
 
 #define PVideoFrame const VSFrameRef *
-#define GetChildFrame(n) env->vsapi->getFrame(clipFrame(n), node, nullptr, 0)
-#define FreeFrame(f) env->vsapi->freeFrame(f)
 
+#ifndef _MM_SHUFFLE
 #define _MM_SHUFFLE(z, y, x, w) (z<<6) | (y<<4) | (x<<2) | w
+#endif
 
 #define USE_MMX2  _asm { emms } _asm { sfence }
 
@@ -45,11 +42,6 @@ static double GetF(double x) {
 	return (x < 1.0) ? 1.0 - x : 0.0;
 }
 
-enum {
-	PLANAR_Y,
-	PLANAR_U,
-	PLANAR_V
-};
 
 class IT {
 private:
@@ -62,8 +54,6 @@ private:
 
 	int width;
 	int height;
-	int m_bSwap;
-	int m_iField;
 	VSFrameRef* m_pvf[32];
 	int m_ipvfIndex[32];
 	int m_iMaxFrames;
@@ -79,17 +69,8 @@ public:
 	int AdjPara(int v) {
 		return (((v * width) / 720) * height) / 480;
 	}
-	int GetDiffVal(IScriptEnvironment*env, int n, int p = 0) {
-		if (p == 0)
-			return env->m_frameInfo[clipFrame(n)].diffP0;
-		else
-			return env->m_frameInfo[clipFrame(n)].diffS0;
-	}
 	inline int clipFrame(int n) {
 		return max(0, min(n, m_iMaxFrames - 1));
-	}
-	inline int clipOutFrame(int n) {
-		return max(0, min(n, vi->numFrames - 1));
 	}
 	inline int clipX(int x) {
 		x = max(0, min(width - 1, x));
@@ -100,35 +81,6 @@ public:
 	}
 	inline int clipYH(int y) {
 		return max(0, min((height >> 1) - 1, y));
-	}
-	inline const unsigned char* SYP(IScriptEnvironment* env, const VSFrameRef * pv, int y, int plane = PLANAR_Y) {
-		y = max(0, min(height - 1, y));
-		if (m_bSwap)
-			y = y ^ 1;
-		auto rPtr = env->vsapi->getReadPtr(pv, plane);
-		auto rStr = env->vsapi->getStride(pv, plane);
-		if (plane == PLANAR_Y)
-			return rPtr + y * rStr;
-		else
-			return rPtr + (((y >> 2) << 1) + (y % 2)) * rStr;
-		//if (plane == PLANAR_Y)
-		// return &pv->GetReadPtr()[y * pv->GetPitch()];
-		//else
-		// return &pv->GetReadPtr(plane)[(((y >> 2) << 1) + (y % 2)) * pv->GetPitch(plane)];
-	}
-	inline unsigned char* DYP(IScriptEnvironment* env, VSFrameRef * pv, int y, int plane = PLANAR_Y) {
-		y = max(0, min(height - 1, y));
-		auto wPtr = env->vsapi->getWritePtr(pv, plane);
-		auto wStr = env->vsapi->getStride(pv, plane);
-		if (plane == PLANAR_Y)
-			return wPtr + y * wStr;
-		else
-			return wPtr + (((y >> 2) << 1) + (y % 2)) * wStr;
-		return env->vsapi->getWritePtr(pv, plane) + y * env->vsapi->getStride(pv, plane);
-		//if (plane == PLANAR_Y)
-		// return pv->GetWritePtr() + y * pv->GetPitch();
-		//else
-		// return pv->GetWritePtr(plane) + (((y >> 2) << 1) + (y % 2)) * pv->GetPitch(plane);
 	}
 	inline unsigned char* B2YP(unsigned char *dst, int y) {
 		y = max(0, min(height - 1, y));
@@ -166,14 +118,3 @@ public:
 	bool __stdcall DrawPrevFrame(IScriptEnvironment* env, VSFrameRef * dst, int n);
 
 };
-
-void VS_CC
-itInit(VSMap *in, VSMap *out, void **instanceData, VSNode *node, VSCore *core, const VSAPI *vsapi);
-
-void VS_CC
-itFree(void *instanceData, VSCore *core, const VSAPI *vsapi);
-
-const VSFrameRef *VS_CC
-itGetFrame(int n, int activationReason, void **instanceData, void **frameData, VSFrameContext *frameCtx, VSCore *core, const VSAPI *vsapi);
-
-#endif

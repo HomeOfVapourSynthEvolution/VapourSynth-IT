@@ -84,7 +84,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="IScriptEnvironment.cpp" />
     <ClCompile Include="vs_it.cpp" />
     <ClCompile Include="vs_it_interface.cpp" />
     <ClCompile Include="vs_it_misc.cpp" />

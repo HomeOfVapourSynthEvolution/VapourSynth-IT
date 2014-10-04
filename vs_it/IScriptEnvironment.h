@@ -44,6 +44,12 @@ public:
 	char itype;
 };
 
+enum {
+	PLANAR_Y,
+	PLANAR_U,
+	PLANAR_V
+};
+
 class IScriptEnvironment
 {
 public:
@@ -62,22 +68,43 @@ public:
 	VSFrameContext *frameCtx;
 	VSCore *core;
 	const VSAPI *vsapi;
-	IScriptEnvironment(VSFrameContext *_frameCtx, VSCore *_core, const VSAPI *_vsapi);
-	~IScriptEnvironment();
-	VSFrameRef *IScriptEnvironment::NewVideoFrame(const VSVideoInfo * vi);
-	void BitBlt(BYTE* dstp, int dst_pitch, const BYTE* srcp, int src_pitch, int row_size, int height) {
-		if ((!height) || (!row_size)) return;
-
-		if (height == 1 || (dst_pitch == src_pitch && src_pitch == row_size)) {
-			memcpy(dstp, srcp, row_size*height);
-		}
-		else {
-			for (int y = height; y > 0; --y) {
-				memcpy(dstp, srcp, row_size);
-				dstp += dst_pitch;
-				srcp += src_pitch;
-			}
-		}
+	VSNodeRef *node;
+	const VSVideoInfo *vi;
+	IScriptEnvironment(VSFrameContext *_frameCtx, VSCore *_core, const VSAPI *_vsapi, VSNodeRef *_node)
+		: frameCtx(_frameCtx), core(_core), vsapi(_vsapi), node(_node) {
+		vi = vsapi->getVideoInfo(node);
+		m_iSumC = m_iSumP = m_iSumN = 0;
+		m_iUsePrev = m_iUseNext = 0;
+	}
+	~IScriptEnvironment() { }
+	VSFrameRef *NewVideoFrame(const VSVideoInfo * vi) {
+		return vsapi->newVideoFrame(vi->format, vi->width, vi->height, nullptr, core);
+	}
+	const VSFrameRef *GetFrame(int n) {
+		return vsapi->getFrame(n, node, nullptr, 0);
+	}
+	void FreeFrame(const VSFrameRef* source) {
+		vsapi->freeFrame(source);
+	}
+	void BitBlt(void* dstp, int dst_pitch, const void* srcp, int src_pitch, int row_size, int height) {
+		vs_bitblt(dstp, dst_pitch, srcp, src_pitch, row_size, height);
+	}
+	inline const unsigned char* SYP(const VSFrameRef * pv, int y, int plane = PLANAR_Y) {
+		y = VSMAX(0, VSMIN(vi->height - 1, y));
+		auto rPtr = vsapi->getReadPtr(pv, plane);
+		auto rStr = vsapi->getStride(pv, plane);
+		if (plane == PLANAR_Y)
+			return rPtr + y * rStr;
+		else
+			return rPtr + (((y >> 2) << 1) + (y % 2)) * rStr;
+	}
+	inline unsigned char* DYP(VSFrameRef * pv, int y, int plane = PLANAR_Y) {
+		y = VSMAX(0, VSMIN(vi->height - 1, y));
+		auto wPtr = vsapi->getWritePtr(pv, plane);
+		auto wStr = vsapi->getStride(pv, plane);
+		if (plane == PLANAR_Y)
+			return wPtr + y * wStr;
+		else
+			return wPtr + (((y >> 2) << 1) + (y % 2)) * wStr;
 	}
 };
-

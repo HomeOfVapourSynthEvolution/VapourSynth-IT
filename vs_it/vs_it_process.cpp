@@ -196,7 +196,7 @@ void __stdcall IT::Decide(IScriptEnvironment*env, int n)
 
 void IT::DeintOneField_YV12(IScriptEnvironment*env, VSFrameRef* dst, int n)
 {
-	const VSFrameRef * srcC = GetChildFrame(n);
+	const VSFrameRef * srcC = env->GetFrame(n);
 	const VSFrameRef *srcR;
 	switch (toupper(env->m_iUseFrame)) {
 	default:
@@ -204,10 +204,10 @@ void IT::DeintOneField_YV12(IScriptEnvironment*env, VSFrameRef* dst, int n)
 		srcR = srcC;
 		break;
 	case 'P':
-		srcR = GetChildFrame(n - 1);
+		srcR = env->GetFrame(n - 1);
 		break;
 	case 'N':
-		srcR = GetChildFrame(n + 1);
+		srcR = env->GetFrame(n + 1);
 		break;
 	}
 
@@ -266,23 +266,23 @@ void IT::DeintOneField_YV12(IScriptEnvironment*env, VSFrameRef* dst, int n)
 	const int nRowSizeDstU = width >> vi->format->subSamplingW; // dst->GetRowSize(PLANAR_U); DIVIDE BY SIZEOF(T)
 
 	for (y = 0; y < height; y += 2) {
-		pT = SYP(env, srcR, y - 1);
-		pC = SYP(env, srcC, y);
-		pB = SYP(env, srcR, y + 1);
-		pBB = SYP(env, srcC, y + 2);
-		pC_U = SYP(env, srcC, y, PLANAR_U);
-		pB_U = SYP(env, srcR, y + 1, PLANAR_U);
-		pBB_U = SYP(env, srcC, y + 4, PLANAR_U);
-		pC_V = SYP(env, srcC, y, PLANAR_V);
-		pB_V = SYP(env, srcR, y + 1, PLANAR_V);
-		pBB_V = SYP(env, srcC, y + 4, PLANAR_V);
+		pT = env->SYP(srcR, y - 1);
+		pC = env->SYP(srcC, y);
+		pB = env->SYP(srcR, y + 1);
+		pBB = env->SYP(srcC, y + 2);
+		pC_U = env->SYP(srcC, y, PLANAR_U);
+		pB_U = env->SYP(srcR, y + 1, PLANAR_U);
+		pBB_U = env->SYP(srcC, y + 4, PLANAR_U);
+		pC_V = env->SYP(srcC, y, PLANAR_V);
+		pB_V = env->SYP(srcR, y + 1, PLANAR_V);
+		pBB_V = env->SYP(srcC, y + 4, PLANAR_V);
 
-		pDC = DYP(env, dst, y);
-		pDB = DYP(env, dst, y + 1);
-		pDC_U = DYP(env, dst, y, PLANAR_U);
-		pDB_U = DYP(env, dst, y + 1, PLANAR_U);
-		pDC_V = DYP(env, dst, y, PLANAR_V);
-		pDB_V = DYP(env, dst, y + 1, PLANAR_V);
+		pDC = env->DYP(dst, y);
+		pDB = env->DYP(dst, y + 1);
+		pDC_U = env->DYP(dst, y, PLANAR_U);
+		pDB_U = env->DYP(dst, y + 1, PLANAR_U);
+		pDC_V = env->DYP(dst, y, PLANAR_V);
+		pDB_V = env->DYP(dst, y + 1, PLANAR_V);
 
 		env->BitBlt(pDC, nPitchDst, pC, nPitchSrc, nRowSizeDst, 1);
 		if ((y >> 1) % 2)
@@ -315,8 +315,8 @@ void IT::DeintOneField_YV12(IScriptEnvironment*env, VSFrameRef* dst, int n)
 	}
 	delete[] pFieldMap;
 	if (srcC != srcR)
-		FreeFrame(srcR);
-	FreeFrame(srcC);
+		env->FreeFrame(srcR);
+	env->FreeFrame(srcC);
 
 	return;
 }
@@ -330,7 +330,7 @@ void IT::DeintOneField_YV12(IScriptEnvironment*env, VSFrameRef* dst, int n)
 void IT::MakeSimpleBlurMap_YV12(IScriptEnvironment*env, int n)
 {
 	int twidth = width;
-	const VSFrameRef * srcC = GetChildFrame(n);
+	const VSFrameRef * srcC = env->GetFrame(n);
 	const VSFrameRef *srcR;
 	switch (toupper(env->m_iUseFrame)) {
 	default:
@@ -338,10 +338,10 @@ void IT::MakeSimpleBlurMap_YV12(IScriptEnvironment*env, int n)
 		srcR = srcC;
 		break;
 	case 'P':
-		srcR = GetChildFrame(n - 1);
+		srcR = env->GetFrame(n - 1);
 		break;
 	case 'N':
-		srcR = GetChildFrame(n + 1);
+		srcR = env->GetFrame(n + 1);
 		break;
 	}
 	const unsigned char *pT;
@@ -353,15 +353,15 @@ void IT::MakeSimpleBlurMap_YV12(IScriptEnvironment*env, int n)
 		{
 			if (y % 2)
 			{
-				pT = SYP(env, srcC, y - 1);
-				pC = SYP(env, srcR, y);
-				pB = SYP(env, srcC, y + 1);
+				pT = env->SYP(srcC, y - 1);
+				pC = env->SYP(srcR, y);
+				pB = env->SYP(srcC, y + 1);
 			}
 			else
 			{
-				pT = SYP(env, srcR, y - 1);
-				pC = SYP(env, srcC, y);
-				pB = SYP(env, srcR, y + 1);
+				pT = env->SYP(srcR, y - 1);
+				pC = env->SYP(srcC, y);
+				pB = env->SYP(srcR, y + 1);
 			}
 			_asm {
 				mov rax, pC
@@ -396,8 +396,8 @@ void IT::MakeSimpleBlurMap_YV12(IScriptEnvironment*env, int n)
 	}
 	USE_MMX2;
 	if (srcC != srcR)
-		FreeFrame(srcR);
-	FreeFrame(srcC);
+		env->FreeFrame(srcR);
+	env->FreeFrame(srcC);
 }
 
 #define MAKE_MOTION_MAP2_ASM_INIT(C, P) \
@@ -416,24 +416,24 @@ void IT::MakeMotionMap2Max_YV12(IScriptEnvironment*env, int n)
 {
 	const int twidth = width >> 1;
 
-	PVideoFrame srcP = GetChildFrame(n - 1);
-	PVideoFrame srcC = GetChildFrame(n);
-	PVideoFrame srcN = GetChildFrame(n + 1);
+	const VSFrameRef* srcP = env->GetFrame(n - 1);
+	const VSFrameRef* srcC = env->GetFrame(n);
+	const VSFrameRef* srcN = env->GetFrame(n + 1);
 
 	//	for(int y = 0; y < height; y += 2) {
 	for (int y = 0; y < height; y++) {
 		unsigned char *pD = env->m_motionMap4DIMax + y * width;
 		//		unsigned char *pDB = m_motionMap4DIMax + (y + 1) * width;
 		{
-			const unsigned char *pC = SYP(env, srcC, y);
-			const unsigned char *pP = SYP(env, srcP, y);
-			const unsigned char *pN = SYP(env, srcN, y);
-			const unsigned char *pC_U = SYP(env, srcC, y, PLANAR_U);
-			const unsigned char *pP_U = SYP(env, srcP, y, PLANAR_U);
-			const unsigned char *pN_U = SYP(env, srcN, y, PLANAR_U);
-			const unsigned char *pC_V = SYP(env, srcC, y, PLANAR_V);
-			const unsigned char *pP_V = SYP(env, srcP, y, PLANAR_V);
-			const unsigned char *pN_V = SYP(env, srcN, y, PLANAR_V);
+			const unsigned char *pC = env->SYP(srcC, y);
+			const unsigned char *pP = env->SYP(srcP, y);
+			const unsigned char *pN = env->SYP(srcN, y);
+			const unsigned char *pC_U = env->SYP(srcC, y, PLANAR_U);
+			const unsigned char *pP_U = env->SYP(srcP, y, PLANAR_U);
+			const unsigned char *pN_U = env->SYP(srcN, y, PLANAR_U);
+			const unsigned char *pC_V = env->SYP(srcC, y, PLANAR_V);
+			const unsigned char *pP_V = env->SYP(srcP, y, PLANAR_V);
+			const unsigned char *pN_V = env->SYP(srcN, y, PLANAR_V);
 
 			_asm {
 				mov rdi, pD
@@ -479,7 +479,7 @@ void IT::MakeMotionMap2Max_YV12(IScriptEnvironment*env, int n)
 		}
 	}
 	USE_MMX2;
-	FreeFrame(srcC);
-	FreeFrame(srcP);
-	FreeFrame(srcN);
+	env->FreeFrame(srcC);
+	env->FreeFrame(srcP);
+	env->FreeFrame(srcN);
 }

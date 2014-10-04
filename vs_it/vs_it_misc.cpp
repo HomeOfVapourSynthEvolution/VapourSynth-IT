@@ -28,17 +28,17 @@ void IT::SetFT(IScriptEnvironment*env, int base, int n, char c)
 
 void IT::ChooseBest(IScriptEnvironment* env, int n)
 {
-	PVideoFrame srcC = GetChildFrame(n);
+	const VSFrameRef* srcC = env->GetFrame(clipFrame(n));
 	//	MakeMotionMap(m_iCurrentFrame - 1, false);
 	MakeMotionMap_YV12(env, env->m_iCurrentFrame, false);
 	MakeMotionMap_YV12(env, env->m_iCurrentFrame + 1, false);
 	MakeDEmap_YV12(env, srcC, 0);
 	EvalIV_YV12(env, n, srcC, env->m_iSumC, env->m_iSumPC);
-	PVideoFrame srcP = GetChildFrame(n - 1);
+	const VSFrameRef* srcP = env->GetFrame(clipFrame(n - 1));
 	EvalIV_YV12(env, n, srcP, env->m_iSumP, env->m_iSumPP);
 	CompCP(env);
-	FreeFrame(srcC);
-	FreeFrame(srcP);
+	env->FreeFrame(srcC);
+	env->FreeFrame(srcP);
 }
 
 #define EVAL_IV_ASM_INIT(C, T, B) \
@@ -74,7 +74,7 @@ void IT::EvalIV_YV12(IScriptEnvironment *env, int n, const VSFrameRef * ref, lon
 	unsigned char rsum[8], psum[8];
 	unsigned short psum0[4], psum1[4];
 
-	PVideoFrame srcC = GetChildFrame(n);
+	const VSFrameRef* srcC = env->GetFrame(clipFrame(n));
 	for (int i = 0; i < 8; ++i) {
 		th[i] = 40;
 		th2[i] = 6;
@@ -86,21 +86,16 @@ void IT::EvalIV_YV12(IScriptEnvironment *env, int n, const VSFrameRef * ref, lon
 	int sum = 0, sum2 = 0; //, sumS = 0;
 	for (int yy = 16; yy < height - 16; yy += 2) {
 		int y;
-		if (m_iField == 0) {
-			y = yy + 1;
-		}
-		else {
-			y = yy + 0;
-		}
-		const unsigned char *pT = SYP(env, srcC, y - 1);
-		const unsigned char *pC = SYP(env, ref, y);
-		const unsigned char *pB = SYP(env, srcC, y + 1);
-		const unsigned char *pT_U = SYP(env, srcC, y - 1, PLANAR_U);
-		const unsigned char *pC_U = SYP(env, ref, y, PLANAR_U);
-		const unsigned char *pB_U = SYP(env, srcC, y + 1, PLANAR_U);
-		const unsigned char *pT_V = SYP(env, srcC, y - 1, PLANAR_V);
-		const unsigned char *pC_V = SYP(env, ref, y, PLANAR_V);
-		const unsigned char *pB_V = SYP(env, srcC, y + 1, PLANAR_V);
+		y = yy + 1;
+		const unsigned char *pT = env->SYP(srcC, y - 1);
+		const unsigned char *pC = env->SYP(ref, y);
+		const unsigned char *pB = env->SYP(srcC, y + 1);
+		const unsigned char *pT_U = env->SYP(srcC, y - 1, PLANAR_U);
+		const unsigned char *pC_U = env->SYP(ref, y, PLANAR_U);
+		const unsigned char *pB_U = env->SYP(srcC, y + 1, PLANAR_U);
+		const unsigned char *pT_V = env->SYP(srcC, y - 1, PLANAR_V);
+		const unsigned char *pC_V = env->SYP(ref, y, PLANAR_V);
+		const unsigned char *pB_V = env->SYP(srcC, y + 1, PLANAR_V);
 
 		const unsigned char *peT = &env->m_edgeMap[clipY(y - 1) * width];
 		const unsigned char *peC = &env->m_edgeMap[clipY(y) * width];
@@ -172,7 +167,7 @@ void IT::EvalIV_YV12(IScriptEnvironment *env, int n, const VSFrameRef * ref, lon
 	counter = sum;
 	counterp = sum2;
 
-	FreeFrame(srcC);
+	env->FreeFrame(srcC);
 	USE_MMX2;
 	return;
 }
@@ -197,15 +192,15 @@ void IT::MakeDEmap_YV12(IScriptEnvironment*env, const VSFrameRef * ref, int offs
 
 	for (int yy = 0; yy < height; yy += 2) {
 		int y = yy + offset;
-		const unsigned char *pTT = SYP(env, ref, y - 2);
-		const unsigned char *pC = SYP(env, ref, y);
-		const unsigned char *pBB = SYP(env, ref, y + 2);
-		const unsigned char *pTT_U = SYP(env, ref, y - 2, PLANAR_U);
-		const unsigned char *pC_U = SYP(env, ref, y, PLANAR_U);
-		const unsigned char *pBB_U = SYP(env, ref, y + 2, PLANAR_U);
-		const unsigned char *pTT_V = SYP(env, ref, y - 2, PLANAR_V);
-		const unsigned char *pC_V = SYP(env, ref, y, PLANAR_V);
-		const unsigned char *pBB_V = SYP(env, ref, y + 2, PLANAR_V);
+		const unsigned char *pTT = env->SYP(ref, y - 2);
+		const unsigned char *pC = env->SYP(ref, y);
+		const unsigned char *pBB = env->SYP(ref, y + 2);
+		const unsigned char *pTT_U = env->SYP(ref, y - 2, PLANAR_U);
+		const unsigned char *pC_U = env->SYP(ref, y, PLANAR_U);
+		const unsigned char *pBB_U = env->SYP(ref, y + 2, PLANAR_U);
+		const unsigned char *pTT_V = env->SYP(ref, y - 2, PLANAR_V);
+		const unsigned char *pC_V = env->SYP(ref, y, PLANAR_V);
+		const unsigned char *pBB_V = env->SYP(ref, y + 2, PLANAR_V);
 		unsigned char *pED = env->m_edgeMap + y * width;
 		__asm {
 			mov rdi, pED
@@ -263,16 +258,15 @@ void IT::MakeMotionMap_YV12(IScriptEnvironment*env, int n, bool flag)
 		mbTh2[i] = 6 * 3;
 	}
 
-
-	PVideoFrame srcP = GetChildFrame(n - 1);
-	PVideoFrame srcC = GetChildFrame(n);
+	const VSFrameRef* srcP = env->GetFrame(clipFrame(n - 1));
+	const VSFrameRef* srcC = env->GetFrame(n);
 	TS_ALIGN short bufP0[MAX_WIDTH];
 	TS_ALIGN unsigned char bufP1[MAX_WIDTH];
 	int pe0 = 0, po0 = 0, pe1 = 0, po1 = 0;
 	for (int yy = 16; yy < height - 16; ++yy) {
 		int y = yy;
-		const unsigned char *pC = SYP(env, srcC, y);
-		const unsigned char *pP = SYP(env, srcP, y);
+		const unsigned char *pC = env->SYP(srcC, y);
+		const unsigned char *pP = env->SYP(srcP, y);
 		{
 			_asm {
 				pxor mm7, mm7
@@ -377,8 +371,8 @@ void IT::MakeMotionMap_YV12(IScriptEnvironment*env, int n, bool flag)
 	env->m_frameInfo[n].diffS0 = pe1;
 	env->m_frameInfo[n].diffS1 = po1;
 	USE_MMX2;
-	FreeFrame(srcC);
-	FreeFrame(srcP);
+	env->FreeFrame(srcC);
+	env->FreeFrame(srcP);
 }
 
 bool IT::CompCP(IScriptEnvironment*env)
@@ -534,18 +528,18 @@ bool IT::DrawPrevFrame(IScriptEnvironment*env, VSFrameRef * dst, int n)
 
 void IT::CopyCPNField(IScriptEnvironment* env, VSFrameRef * dst, int n)
 {
-	PVideoFrame srcC = GetChildFrame(n);
-	PVideoFrame srcR;
+	const VSFrameRef* srcC = env->GetFrame(clipFrame(n));
+	const VSFrameRef* srcR;
 	switch (toupper(env->m_iUseFrame)) {
 	default:
 	case 'C':
 		srcR = srcC;
 		break;
 	case 'P':
-		srcR = GetChildFrame(n - 1);
+		srcR = env->GetFrame(clipFrame(n - 1));
 		break;
 	case 'N':
-		srcR = GetChildFrame(n + 1);
+		srcR = env->GetFrame(clipFrame(n + 1));
 		break;
 	}
 
@@ -556,51 +550,41 @@ void IT::CopyCPNField(IScriptEnvironment* env, VSFrameRef * dst, int n)
 
 	for (int yy = 0; yy < height; yy += 2) {
 		int y, yo;
-		if (m_iField == 0) {
-			y = yy + 1;
-			yo = yy + 0;
-		}
-		else {
-			y = yy + 0;
-			yo = yy + 1;
-		}
-		env->BitBlt(DYP(env, dst, yo), nPitch, SYP(env, srcC, yo), nPitch, nRowSize, 1);
-		env->BitBlt(DYP(env, dst, y), nPitch, SYP(env, srcR, y), nPitch, nRowSize, 1);
+		y = yy + 1;
+		yo = yy + 0;
+		env->BitBlt(env->DYP(dst, yo), nPitch, env->SYP(srcC, yo), nPitch, nRowSize, 1);
+		env->BitBlt(env->DYP(dst, y), nPitch, env->SYP(srcR, y), nPitch, nRowSize, 1);
 
 		if ((yy >> 1) % 2)
 		{
-			env->BitBlt(DYP(env, dst, yo, PLANAR_U), nPitchU, SYP(env, srcC, yo, PLANAR_U), nPitchU, nRowSizeU, 1);
-			env->BitBlt(DYP(env, dst, y, PLANAR_U), nPitchU, SYP(env, srcR, y, PLANAR_U), nPitchU, nRowSizeU, 1);
-			env->BitBlt(DYP(env, dst, yo, PLANAR_V), nPitchU, SYP(env, srcC, yo, PLANAR_V), nPitchU, nRowSizeU, 1);
-			env->BitBlt(DYP(env, dst, y, PLANAR_V), nPitchU, SYP(env, srcR, y, PLANAR_V), nPitchU, nRowSizeU, 1);
+			env->BitBlt(env->DYP(dst, yo, PLANAR_U), nPitchU, env->SYP(srcC, yo, PLANAR_U), nPitchU, nRowSizeU, 1);
+			env->BitBlt(env->DYP(dst, y, PLANAR_U), nPitchU, env->SYP(srcR, y, PLANAR_U), nPitchU, nRowSizeU, 1);
+			env->BitBlt(env->DYP(dst, yo, PLANAR_V), nPitchU, env->SYP(srcC, yo, PLANAR_V), nPitchU, nRowSizeU, 1);
+			env->BitBlt(env->DYP(dst, y, PLANAR_V), nPitchU, env->SYP(srcR, y, PLANAR_V), nPitchU, nRowSizeU, 1);
 		}
 	}
 	USE_MMX2;
 	if (srcC != srcR)
-		FreeFrame(srcR);
-	FreeFrame(srcC);
+		env->FreeFrame(srcR);
+	env->FreeFrame(srcC);
 }
 
 bool IT::CheckSceneChange(IScriptEnvironment*env, int n)
 {
-	PVideoFrame srcP = GetChildFrame(n - 1);
-	PVideoFrame srcC = GetChildFrame(n);
+	const VSFrameRef* srcP = env->GetFrame(clipFrame(n - 1));
+	const VSFrameRef* srcC = env->GetFrame(clipFrame(n));
 
 	int rowSize = env->vsapi->getStride(srcC, 0);
 
 	int sum3 = 0;
 	int x, y;
 
-	int startY = 0;
-	if (m_iField == 0)
-	{
-		startY = 1;
-	}
+	int startY = 1;
 
 	for (y = startY; y < height; y += 2)
 	{
-		const unsigned char *pC = SYP(env, srcC, y);
-		const unsigned char *pP = SYP(env, srcP, y);
+		const unsigned char *pC = env->SYP(srcC, y);
+		const unsigned char *pP = env->SYP(srcP, y);
 
 		for (x = 0; x < rowSize; x++)
 		{
@@ -608,8 +592,7 @@ bool IT::CheckSceneChange(IScriptEnvironment*env, int n)
 			if (a > 50) sum3 += 1;
 		}
 	}
-	FreeFrame(srcP);
-	FreeFrame(srcC);
+	env->FreeFrame(srcP);
+	env->FreeFrame(srcC);
 	return sum3 > height * rowSize / 8;
 }
-
