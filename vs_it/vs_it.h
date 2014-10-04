@@ -29,6 +29,18 @@ const int MAX_WIDTH = 8192;
 
 class IT {
 private:
+    int m_iRealFrame;
+    CFrameInfo *m_frameInfo;
+    CTFblockInfo *m_blockInfo;
+    unsigned char *m_edgeMap, *m_motionMap4DI, *m_motionMap4DIMax;
+
+    long m_iSumC, m_iSumP, m_iSumN, m_iSumM;
+    long m_iSumPC, m_iSumPP, m_iSumPN, m_iSumPM;
+    int m_iCurrentFrame;
+    bool m_bRefP;
+    int m_iUsePrev, m_iUseNext;
+    int m_iUseFrame;
+
 	int m_iPThreshold;
 	int m_iThreshold;
 	int m_iCounter;
@@ -41,6 +53,26 @@ private:
 	VSFrameRef* m_pvf[32];
 	int m_ipvfIndex[32];
 	int m_iMaxFrames;
+
+    __forceinline const unsigned char* SYP(const VSFrameRef * pv, const VSAPI *vsapi, int y, int plane = 0) {
+        y = std::max(0, std::min(vi->height - 1, y));
+        auto rPtr = vsapi->getReadPtr(pv, plane);
+        auto rStr = vsapi->getStride(pv, plane);
+        if (plane == 0)
+            return rPtr + y * rStr;
+        else
+            return rPtr + (((y >> 2) << 1) + (y % 2)) * rStr;
+    }
+    __forceinline unsigned char* DYP(VSFrameRef * pv, const VSAPI *vsapi, int y, int plane = 0) {
+        y = std::max(0, std::min(vi->height - 1, y));
+        auto wPtr = vsapi->getWritePtr(pv, plane);
+        auto wStr = vsapi->getStride(pv, plane);
+        if (plane == 0)
+            return wPtr + y * wStr;
+        else
+            return wPtr + (((y >> 2) << 1) + (y % 2)) * wStr;
+    }
+
 public:
 	const VSVideoInfo* vi;
 	VSNodeRef * node;
@@ -74,31 +106,31 @@ public:
         y = std::max(0, std::min(height - 1, y));
 		return dst + y * width;
 	}
-    void VS_CC GetFramePre(IScriptEnvironment* env, int n);
-    const VSFrameRef* VS_CC GetFrame(IScriptEnvironment* env, int n);
-    const VSFrameRef* VS_CC MakeOutput(IScriptEnvironment* env, VSFrameRef* dst, int n);
-	bool CheckSceneChange(IScriptEnvironment* env, int n);
-	void GetFrameSub(IScriptEnvironment* env, int n);
-    void VS_CC EvalIV_YV12(IScriptEnvironment* env, int n, const VSFrameRef * ref, long &counter, long &counterp);
-    void VS_CC MakeDEmap_YV12(IScriptEnvironment* env, const VSFrameRef * ref, int offset);
-    void VS_CC MakeMotionMap_YV12(IScriptEnvironment* env, int fno, bool flag);
-	// void __stdcall MakeMotionMap2_YV12(IScriptEnvironment* env, int fno, bool flag);
-    void VS_CC MakeMotionMap2Max_YV12(IScriptEnvironment* env, int fno);
-    void VS_CC MakeSimpleBlurMap_YV12(IScriptEnvironment* env, int fno);
-    void VS_CC CopyCPNField(IScriptEnvironment* env, VSFrameRef * dst, int n);
-	// void __stdcall Deinterlace_YV12(IScriptEnvironment* env, VSFrameRef * dst, int n, int nParameterMode = DI_MODE_DEINTERLACE);
-	// void __stdcall SimpleBlur_YV12(IScriptEnvironment* env, VSFrameRef * dst, int n);
-    void VS_CC DeintOneField_YV12(IScriptEnvironment* env, VSFrameRef * dst, int n);
-	// void __stdcall BlendFrame_YV12(IScriptEnvironment* env, VSFrameRef * dst, int base, int n);
+    void VS_CC GetFramePre(int n, VSFrameContext *frameCtx, const VSAPI *vsapi);
+    const VSFrameRef* VS_CC GetFrame(int n, VSCore *core, const VSAPI *vsapi);
+    const VSFrameRef* VS_CC MakeOutput(int n, VSFrameRef* dst, const VSAPI *vsapi);
+    bool CheckSceneChange(int n, const VSAPI *vsapi);
+    void GetFrameSub(int n, const VSAPI *vsapi);
+    void VS_CC EvalIV_YV12(int n, const VSFrameRef * ref, const VSAPI *vsapi, long &counter, long &counterp);
+    void VS_CC MakeDEmap_YV12(const VSFrameRef * ref, const VSAPI *vsapi, int offset);
+    void VS_CC MakeMotionMap_YV12(int n, bool flag, const VSAPI *vsapi);
+	// void __stdcall MakeMotionMap2_YV12(int fno, bool flag);
+    void VS_CC MakeMotionMap2Max_YV12(int n, const VSAPI *vsapi);
+    void VS_CC MakeSimpleBlurMap_YV12(int n, const VSAPI *vsapi);
+    void VS_CC CopyCPNField(int n, VSFrameRef * dst, const VSAPI *vsapi);
+	// void __stdcall Deinterlace_YV12(VSFrameRef * dst, int n, int nParameterMode = DI_MODE_DEINTERLACE);
+	// void __stdcall SimpleBlur_YV12(VSFrameRef * dst, int n);
+    void VS_CC DeintOneField_YV12(int n, VSFrameRef* dst, const VSAPI *vsapi);
+	// void __stdcall BlendFrame_YV12(VSFrameRef * dst, int base, int n);
 	// void __stdcall ShowInterlaceArea(const VSAPI * vsapi, VSFrameRef * dst, int n);
 	// void __stdcall ShowDifference();
-    void VS_CC ChooseBest(IScriptEnvironment* env, int n);
-    bool VS_CC CompCP(IScriptEnvironment* env);
+    void VS_CC ChooseBest(int n, const VSAPI *vsapi);
+    bool VS_CC CompCP();
 	// bool __stdcall CompCN();
-    void VS_CC Decide(IScriptEnvironment* env, int n);
-    void VS_CC SetFT(IScriptEnvironment* env, int base, int n, char c);
+    void VS_CC Decide(int n);
+    void VS_CC SetFT(int base, int n, char c);
 	// void __stdcall ReadLog();
 	// void __stdcall WriteLog();
-    bool VS_CC DrawPrevFrame(IScriptEnvironment* env, VSFrameRef * dst, int n);
+    bool VS_CC DrawPrevFrame(int n, VSFrameRef * dst, const VSAPI *vsapi);
 
 };

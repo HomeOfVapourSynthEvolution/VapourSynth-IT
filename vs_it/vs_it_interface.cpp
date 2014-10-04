@@ -37,16 +37,15 @@ const VSFrameRef *VS_CC itGetFrame(int n, int activationReason, void **instanceD
                                    VSFrameContext *frameCtx, VSCore *core, const VSAPI *vsapi)
 {
 	INSTANCE *d = *(INSTANCE**)instanceData;
-	IScriptEnvironment env(frameCtx, core, vsapi, d->node);
 	if (activationReason == arInitial) {
-		d->GetFramePre(&env, n);
+		d->GetFramePre(n, frameCtx, vsapi);
 		return NULL;
 	}
 	if (activationReason != arAllFramesReady) {
 		return NULL;
 	}
 
-	return d->GetFrame(&env, n);
+	return d->GetFrame(n, core, vsapi);
 }
 
 static void VS_CC itCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core, const VSAPI *vsapi)

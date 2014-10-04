@@ -19,26 +19,25 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301, USA
 #include "vs_it.h"
 #include "IScriptEnvironment.h"
 
-void IT::SetFT(IScriptEnvironment*env, int base, int n, char c)
+void IT::SetFT(int base, int n, char c)
 {
-    env->m_frameInfo[clipFrame(base + n)].mflag = c;
-	env->m_blockInfo[base / 5].cfi = n;
-	env->m_blockInfo[base / 5].level = '0';
+    m_frameInfo[clipFrame(base + n)].mflag = c;
+	m_blockInfo[base / 5].cfi = n;
+	m_blockInfo[base / 5].level = '0';
 }
 
-void IT::ChooseBest(IScriptEnvironment* env, int n)
+void IT::ChooseBest(int n, const VSAPI *vsapi)
 {
-	const VSFrameRef* srcC = env->GetFrame(clipFrame(n));
-	//	MakeMotionMap(m_iCurrentFrame - 1, false);
-	MakeMotionMap_YV12(env, env->m_iCurrentFrame, false);
-	MakeMotionMap_YV12(env, env->m_iCurrentFrame + 1, false);
-	MakeDEmap_YV12(env, srcC, 0);
-	EvalIV_YV12(env, n, srcC, env->m_iSumC, env->m_iSumPC);
-	const VSFrameRef* srcP = env->GetFrame(clipFrame(n - 1));
-	EvalIV_YV12(env, n, srcP, env->m_iSumP, env->m_iSumPP);
-	CompCP(env);
-	env->FreeFrame(srcC);
-	env->FreeFrame(srcP);
+    const VSFrameRef* srcC = vsapi->getFrame(clipFrame(n), node, nullptr, 0);
+	MakeMotionMap_YV12(m_iCurrentFrame, false, vsapi);
+	MakeMotionMap_YV12(m_iCurrentFrame + 1, false, vsapi);
+	MakeDEmap_YV12(srcC, vsapi, 0);
+	EvalIV_YV12(n, srcC, vsapi, m_iSumC, m_iSumPC);
+    const VSFrameRef* srcP = vsapi->getFrame(clipFrame(n - 1), node, nullptr, 0);
+	EvalIV_YV12(n, srcP, vsapi, m_iSumP, m_iSumPP);
+	CompCP();
+    vsapi->freeFrame(srcC);
+    vsapi->freeFrame(srcP);
 }
 
 #define EVAL_IV_ASM_INIT(C, T, B) \
@@ -67,39 +66,39 @@ void IT::ChooseBest(IScriptEnvironment* env, int n)
 	__asm pminub mmm, mm1
 
 ///////////////////////////////////////////////////////////////////////////
-void IT::EvalIV_YV12(IScriptEnvironment *env, int n, const VSFrameRef * ref, long &counter, long &counterp)
+void IT::EvalIV_YV12(int n, const VSFrameRef * ref, const VSAPI *vsapi, long &counter, long &counterp)
 {
 	const __int64 mask1 = 0x0101010101010101i64;
 	unsigned char th[8], th2[8];
 	unsigned char rsum[8], psum[8];
 	unsigned short psum0[4], psum1[4];
 
-	const VSFrameRef* srcC = env->GetFrame(clipFrame(n));
+    const VSFrameRef* srcC = vsapi->getFrame(clipFrame(n), node, nullptr, 0);
 	for (int i = 0; i < 8; ++i) {
 		th[i] = 40;
 		th2[i] = 6;
 	}
 
-	MakeDEmap_YV12(env, ref, 1);
+	MakeDEmap_YV12(ref, vsapi, 1);
 
 	const int widthminus16 = (width - 16) >> 1;
 	int sum = 0, sum2 = 0; //, sumS = 0;
 	for (int yy = 16; yy < height - 16; yy += 2) {
 		int y;
 		y = yy + 1;
-		const unsigned char *pT = env->SYP(srcC, y - 1);
-		const unsigned char *pC = env->SYP(ref, y);
-		const unsigned char *pB = env->SYP(srcC, y + 1);
-		const unsigned char *pT_U = env->SYP(srcC, y - 1, 1);
-		const unsigned char *pC_U = env->SYP(ref, y, 1);
-		const unsigned char *pB_U = env->SYP(srcC, y + 1, 1);
-		const unsigned char *pT_V = env->SYP(srcC, y - 1, 2);
-		const unsigned char *pC_V = env->SYP(ref, y, 2);
-		const unsigned char *pB_V = env->SYP(srcC, y + 1, 2);
+        const unsigned char *pT = SYP(srcC, vsapi, y - 1);
+        const unsigned char *pC = SYP(ref, vsapi, y);
+        const unsigned char *pB = SYP(srcC, vsapi, y + 1);
+        const unsigned char *pT_U = SYP(srcC, vsapi, y - 1, 1);
+        const unsigned char *pC_U = SYP(ref, vsapi, y, 1);
+        const unsigned char *pB_U = SYP(srcC, vsapi, y + 1, 1);
+        const unsigned char *pT_V = SYP(srcC, vsapi, y - 1, 2);
+        const unsigned char *pC_V = SYP(ref, vsapi, y, 2);
+        const unsigned char *pB_V = SYP(srcC, vsapi, y + 1, 2);
 
-		const unsigned char *peT = &env->m_edgeMap[clipY(y - 1) * width];
-		const unsigned char *peC = &env->m_edgeMap[clipY(y) * width];
-		const unsigned char *peB = &env->m_edgeMap[clipY(y + 1) * width];
+		const unsigned char *peT = &m_edgeMap[clipY(y - 1) * width];
+		const unsigned char *peC = &m_edgeMap[clipY(y) * width];
+		const unsigned char *peB = &m_edgeMap[clipY(y + 1) * width];
 
 		//		unsigned char *pmW = m_pImap + width * y;
 		__asm {
@@ -167,7 +166,7 @@ void IT::EvalIV_YV12(IScriptEnvironment *env, int n, const VSFrameRef * ref, lon
 	counter = sum;
 	counterp = sum2;
 
-	env->FreeFrame(srcC);
+    vsapi->freeFrame(srcC);
 	USE_MMX2;
 	return;
 }
@@ -186,22 +185,22 @@ void IT::EvalIV_YV12(IScriptEnvironment *env, int n, const VSFrameRef * ref, lon
 	__asm por mmm, mm7
 
 ///////////////////////////////////////////////////////////////////////////
-void IT::MakeDEmap_YV12(IScriptEnvironment*env, const VSFrameRef * ref, int offset)
+void IT::MakeDEmap_YV12(const VSFrameRef * ref, const VSAPI *vsapi, int offset)
 {
 	const int twidth = width >> 1;
 
 	for (int yy = 0; yy < height; yy += 2) {
 		int y = yy + offset;
-		const unsigned char *pTT = env->SYP(ref, y - 2);
-		const unsigned char *pC = env->SYP(ref, y);
-		const unsigned char *pBB = env->SYP(ref, y + 2);
-		const unsigned char *pTT_U = env->SYP(ref, y - 2, 1);
-		const unsigned char *pC_U = env->SYP(ref, y, 1);
-		const unsigned char *pBB_U = env->SYP(ref, y + 2, 1);
-		const unsigned char *pTT_V = env->SYP(ref, y - 2, 2);
-		const unsigned char *pC_V = env->SYP(ref, y, 2);
-		const unsigned char *pBB_V = env->SYP(ref, y + 2, 2);
-		unsigned char *pED = env->m_edgeMap + y * width;
+		const unsigned char *pTT = SYP(ref, vsapi, y - 2);
+        const unsigned char *pC = SYP(ref, vsapi, y);
+        const unsigned char *pBB = SYP(ref, vsapi, y + 2);
+        const unsigned char *pTT_U = SYP(ref, vsapi, y - 2, 1);
+        const unsigned char *pC_U = SYP(ref, vsapi, y, 1);
+        const unsigned char *pBB_U = SYP(ref, vsapi, y + 2, 1);
+        const unsigned char *pTT_V = SYP(ref, vsapi, y - 2, 2);
+        const unsigned char *pC_V = SYP(ref, vsapi, y, 2);
+        const unsigned char *pBB_V = SYP(ref, vsapi, y + 2, 2);
+		unsigned char *pED = m_edgeMap + y * width;
 		__asm {
 			mov rdi, pED
 				xor esi, esi
@@ -234,10 +233,10 @@ void IT::MakeDEmap_YV12(IScriptEnvironment*env, const VSFrameRef * ref, int offs
 	USE_MMX2
 }
 
-void IT::MakeMotionMap_YV12(IScriptEnvironment*env, int n, bool flag)
+void IT::MakeMotionMap_YV12(int n, bool flag, const VSAPI *vsapi)
 {
 	n = clipFrame(n);
-	if (flag == false && env->m_frameInfo[n].diffP0 >= 0) {
+	if (flag == false && m_frameInfo[n].diffP0 >= 0) {
 		return;
 	}
 
@@ -258,15 +257,15 @@ void IT::MakeMotionMap_YV12(IScriptEnvironment*env, int n, bool flag)
 		mbTh2[i] = 6 * 3;
 	}
 
-	const VSFrameRef* srcP = env->GetFrame(clipFrame(n - 1));
-	const VSFrameRef* srcC = env->GetFrame(n);
+    const VSFrameRef* srcP = vsapi->getFrame(clipFrame(n - 1), node, nullptr, 0);
+    const VSFrameRef* srcC = vsapi->getFrame(n, node, nullptr, 0);
     ALIGNED_ARRAY(short bufP0[MAX_WIDTH], 16);
     ALIGNED_ARRAY(unsigned char bufP1[MAX_WIDTH], 16);
 	int pe0 = 0, po0 = 0, pe1 = 0, po1 = 0;
 	for (int yy = 16; yy < height - 16; ++yy) {
 		int y = yy;
-		const unsigned char *pC = env->SYP(srcC, y);
-		const unsigned char *pP = env->SYP(srcP, y);
+		const unsigned char *pC = SYP(srcC, vsapi, y);
+		const unsigned char *pP = SYP(srcP, vsapi, y);
 		{
 			_asm {
 				pxor mm7, mm7
@@ -366,28 +365,26 @@ void IT::MakeMotionMap_YV12(IScriptEnvironment*env, int n, bool flag)
 			}
 		}
 	}
-	env->m_frameInfo[n].diffP0 = pe0;
-	env->m_frameInfo[n].diffP1 = po0;
-	env->m_frameInfo[n].diffS0 = pe1;
-	env->m_frameInfo[n].diffS1 = po1;
+	m_frameInfo[n].diffP0 = pe0;
+	m_frameInfo[n].diffP1 = po0;
+	m_frameInfo[n].diffS0 = pe1;
+	m_frameInfo[n].diffS1 = po1;
 	USE_MMX2;
-	env->FreeFrame(srcC);
-	env->FreeFrame(srcP);
+    vsapi->freeFrame(srcC);
+    vsapi->freeFrame(srcP);
 }
 
-bool IT::CompCP(IScriptEnvironment*env)
+bool IT::CompCP()
 {
-	int n = env->m_iCurrentFrame;
-	int p0 = env->m_frameInfo[n].diffP0;
-	int p1 = env->m_frameInfo[n].diffP1;
-	int n0 = env->m_frameInfo[clipFrame(n + 1)].diffP0;
-	int n1 = env->m_frameInfo[clipFrame(n + 1)].diffP1;
-	int ps0 = env->m_frameInfo[n].diffS0;
-	int ps1 = env->m_frameInfo[n].diffS1;
-	int ns0 = env->m_frameInfo[clipFrame(n + 1)].diffS0;
-	int ns1 = env->m_frameInfo[clipFrame(n + 1)].diffS1;
-	//	int th = 5;
-	//	int thm = 5;
+	int n = m_iCurrentFrame;
+	int p0 = m_frameInfo[n].diffP0;
+	int p1 = m_frameInfo[n].diffP1;
+	int n0 = m_frameInfo[clipFrame(n + 1)].diffP0;
+	int n1 = m_frameInfo[clipFrame(n + 1)].diffP1;
+	int ps0 = m_frameInfo[n].diffS0;
+	int ps1 = m_frameInfo[n].diffS1;
+	int ns0 = m_frameInfo[clipFrame(n + 1)].diffS0;
+	int ns1 = m_frameInfo[clipFrame(n + 1)].diffS1;
 
 	int th = AdjPara(5);
 	int thm = AdjPara(5);
@@ -406,175 +403,167 @@ bool IT::CompCP(IScriptEnvironment*env)
 	//1773
 	int thcomb = AdjPara(20);
 	if (n != 0) {
-		if ((env->m_iSumC < thcomb && env->m_iSumP < thcomb) || abs(env->m_iSumC - env->m_iSumP) * 10 < env->m_iSumC + env->m_iSumP) {
-			if (abs(env->m_iSumC - env->m_iSumP) > AdjPara(8)) {
-				if (env->m_iSumP >= env->m_iSumC) {
-					env->m_iUseFrame = 'c';
+		if ((m_iSumC < thcomb && m_iSumP < thcomb) || std::abs(m_iSumC - m_iSumP) * 10 < m_iSumC + m_iSumP) {
+			if (std::abs(m_iSumC - m_iSumP) > AdjPara(8)) {
+				if (m_iSumP >= m_iSumC) {
+					m_iUseFrame = 'c';
 					return true;
 				}
 				else {
-					env->m_iUseFrame = 'p';
+					m_iUseFrame = 'p';
 					return true;
 				}
 			}
-			if (abs(env->m_iSumPC - env->m_iSumPP) > AdjPara(10)) {
-				if (env->m_iSumPP >= env->m_iSumPC) {
-					env->m_iUseFrame = 'c';
+			if (abs(m_iSumPC - m_iSumPP) > AdjPara(10)) {
+				if (m_iSumPP >= m_iSumPC) {
+					m_iUseFrame = 'c';
 					return true;
 				}
 				else {
-					env->m_iUseFrame = 'p';
+					m_iUseFrame = 'p';
 					return true;
 				}
 			}
 
 			if (spe && mpo) {
-				env->m_iUseFrame = 'p';
+				m_iUseFrame = 'p';
 				return true;
 			}
 			if (mpe && spo) {
-				env->m_iUseFrame = 'c';
+				m_iUseFrame = 'c';
 				return true;
 			}
 			if (mne && sno) {
-				env->m_iUseFrame = 'p';
+				m_iUseFrame = 'p';
 				return true;
 			}
 			if (sne && mno) {
-				env->m_iUseFrame = 'c';
+				m_iUseFrame = 'c';
 				return true;
 			}
 			if (spe && spo) {
-				env->m_iUseFrame = 'c';
+				m_iUseFrame = 'c';
 				return false;
 			}
 			if (sne && sno) {
-				env->m_iUseFrame = 'c';
+				m_iUseFrame = 'c';
 				return false;
 			}
 			if (mpe && mpo && mne && mno) {
-				env->m_iUseFrame = 'c';
+				m_iUseFrame = 'c';
 				return false;
 			}
 
-			//			return (env->m_iSumPC > env->m_iSumPP);
-			if (env->m_iSumPC > env->m_iSumPP) {
-				env->m_iUseFrame = 'p';
+			if (m_iSumPC > m_iSumPP) {
+				m_iUseFrame = 'p';
 				return true;
 			}
 			else {
-				env->m_iUseFrame = 'c';
+				m_iUseFrame = 'c';
 				return false;
 			}
 		}
 	}
-	//	env->m_frameInfo[clipFrame(n)].matchAcc = '0';
-	//	if (env->m_iSumC > env->m_iSumP) {
-	//	} else {
-	//		env->m_iUseFrame = 'C';
-	//		return false;
-	//	}
-	env->m_frameInfo[n].pos = '.';
-	if (env->m_iSumP >= env->m_iSumC) {
-		env->m_iUseFrame = 'C';
+
+	m_frameInfo[n].pos = '.';
+	if (m_iSumP >= m_iSumC) {
+		m_iUseFrame = 'C';
 		if (!spe) {
-			env->m_frameInfo[n].pos = '.';
+			m_frameInfo[n].pos = '.';
 		}
 		return true;
-	}
-	else {
-		env->m_iUseFrame = 'P';
+	} else {
+		m_iUseFrame = 'P';
 		if (spe && !sno) {
-			env->m_frameInfo[n].pos = '2';
+			m_frameInfo[n].pos = '2';
 		}
 		if (!spe && sno) {
-			env->m_frameInfo[n].pos = '3';
+			m_frameInfo[n].pos = '3';
 		}
 		return true;
 	}
 }
 
-bool IT::DrawPrevFrame(IScriptEnvironment*env, VSFrameRef * dst, int n)
+bool IT::DrawPrevFrame(int n, VSFrameRef * dst, const VSAPI *vsapi)
 {
 	bool bResult = false;
 
 	int nPrevFrame = clipFrame(n - 1);
 	int nNextFrame = clipFrame(n + 1);
 
-	int nOldCurrentFrame = env->m_iCurrentFrame;
-	int nOldUseFrame = env->m_iUseFrame;
+	int nOldCurrentFrame = m_iCurrentFrame;
+	int nOldUseFrame = m_iUseFrame;
 
-	GetFrameSub(env, nPrevFrame);
-	GetFrameSub(env, nNextFrame);
+	GetFrameSub(nPrevFrame, vsapi);
+	GetFrameSub(nNextFrame, vsapi);
 
-	env->m_iCurrentFrame = nOldCurrentFrame;
+	m_iCurrentFrame = nOldCurrentFrame;
 
-	if (env->m_frameInfo[nPrevFrame].ip == 'P' && env->m_frameInfo[nNextFrame].ip == 'P')
-	{
-		bResult = CheckSceneChange(env, n);
+	if (m_frameInfo[nPrevFrame].ip == 'P' && m_frameInfo[nNextFrame].ip == 'P')
+    {
+		bResult = CheckSceneChange(n, vsapi);
 	}
 
 	if (bResult)
-	{
-		env->m_iUseFrame = env->m_frameInfo[nPrevFrame].match;
-
-		CopyCPNField(env, dst, nPrevFrame);
+    {
+		m_iUseFrame = m_frameInfo[nPrevFrame].match;
+        CopyCPNField(nPrevFrame, dst, vsapi);
 	}
 
-	env->m_iUseFrame = nOldUseFrame;
+	m_iUseFrame = nOldUseFrame;
 
 	return bResult;
 }
 
-void IT::CopyCPNField(IScriptEnvironment* env, VSFrameRef * dst, int n)
+void IT::CopyCPNField(int n, VSFrameRef * dst, const VSAPI *vsapi)
 {
-	const VSFrameRef* srcC = env->GetFrame(clipFrame(n));
+    const VSFrameRef* srcC = vsapi->getFrame(clipFrame(n), node, nullptr, 0);
 	const VSFrameRef* srcR;
-	switch (toupper(env->m_iUseFrame)) {
+	switch (toupper(m_iUseFrame)) {
 	default:
 	case 'C':
 		srcR = srcC;
 		break;
 	case 'P':
-		srcR = env->GetFrame(clipFrame(n - 1));
+        srcR = vsapi->getFrame(clipFrame(n - 1), node, nullptr, 0);
 		break;
 	case 'N':
-		srcR = env->GetFrame(clipFrame(n + 1));
+        srcR = vsapi->getFrame(clipFrame(n + 1), node, nullptr, 0);
 		break;
 	}
 
-	int nPitch = env->vsapi->getStride(dst, 0);
+	int nPitch = vsapi->getStride(dst, 0);
 	int nRowSize = width;
-	int nPitchU = env->vsapi->getStride(dst, 1);
+	int nPitchU = vsapi->getStride(dst, 1);
 	int nRowSizeU = width >> vi->format->subSamplingW;
 
 	for (int yy = 0; yy < height; yy += 2) {
 		int y, yo;
 		y = yy + 1;
 		yo = yy + 0;
-        vs_bitblt(env->DYP(dst, yo), nPitch, env->SYP(srcC, yo), nPitch, nRowSize, 1);
-        vs_bitblt(env->DYP(dst, y), nPitch, env->SYP(srcR, y), nPitch, nRowSize, 1);
+        vs_bitblt(DYP(dst, vsapi, yo), nPitch, SYP(srcC, vsapi, yo), nPitch, nRowSize, 1);
+        vs_bitblt(DYP(dst, vsapi, y), nPitch, SYP(srcR, vsapi, y), nPitch, nRowSize, 1);
 
 		if ((yy >> 1) % 2)
 		{
-            vs_bitblt(env->DYP(dst, yo, 1), nPitchU, env->SYP(srcC, yo, 1), nPitchU, nRowSizeU, 1);
-            vs_bitblt(env->DYP(dst, y, 1), nPitchU, env->SYP(srcR, y, 1), nPitchU, nRowSizeU, 1);
-            vs_bitblt(env->DYP(dst, yo, 2), nPitchU, env->SYP(srcC, yo, 2), nPitchU, nRowSizeU, 1);
-            vs_bitblt(env->DYP(dst, y, 2), nPitchU, env->SYP(srcR, y, 2), nPitchU, nRowSizeU, 1);
+            vs_bitblt(DYP(dst, vsapi, yo, 1), nPitchU, SYP(srcC, vsapi, yo, 1), nPitchU, nRowSizeU, 1);
+            vs_bitblt(DYP(dst, vsapi, y, 1), nPitchU, SYP(srcR, vsapi, y, 1), nPitchU, nRowSizeU, 1);
+            vs_bitblt(DYP(dst, vsapi, yo, 2), nPitchU, SYP(srcC, vsapi, yo, 2), nPitchU, nRowSizeU, 1);
+            vs_bitblt(DYP(dst, vsapi, y, 2), nPitchU, SYP(srcR, vsapi, y, 2), nPitchU, nRowSizeU, 1);
 		}
 	}
 	USE_MMX2;
 	if (srcC != srcR)
-		env->FreeFrame(srcR);
-	env->FreeFrame(srcC);
+        vsapi->freeFrame(srcR);
+    vsapi->freeFrame(srcC);
 }
 
-bool IT::CheckSceneChange(IScriptEnvironment*env, int n)
+bool IT::CheckSceneChange(int n, const VSAPI *vsapi)
 {
-	const VSFrameRef* srcP = env->GetFrame(clipFrame(n - 1));
-	const VSFrameRef* srcC = env->GetFrame(clipFrame(n));
+    const VSFrameRef* srcP = vsapi->getFrame(clipFrame(n - 1), node, nullptr, 0);
+    const VSFrameRef* srcC = vsapi->getFrame(clipFrame(n), node, nullptr, 0);
 
-	int rowSize = env->vsapi->getStride(srcC, 0);
+	int rowSize = vsapi->getStride(srcC, 0);
 
 	int sum3 = 0;
 	int x, y;
@@ -583,8 +572,8 @@ bool IT::CheckSceneChange(IScriptEnvironment*env, int n)
 
 	for (y = startY; y < height; y += 2)
 	{
-		const unsigned char *pC = env->SYP(srcC, y);
-		const unsigned char *pP = env->SYP(srcP, y);
+		const unsigned char *pC = SYP(srcC, vsapi, y);
+		const unsigned char *pP = SYP(srcP, vsapi, y);
 
 		for (x = 0; x < rowSize; x++)
 		{
@@ -592,7 +581,7 @@ bool IT::CheckSceneChange(IScriptEnvironment*env, int n)
 			if (a > 50) sum3 += 1;
 		}
 	}
-	env->FreeFrame(srcP);
-	env->FreeFrame(srcC);
+    vsapi->freeFrame(srcP);
+    vsapi->freeFrame(srcC);
 	return sum3 > height * rowSize / 8;
 }
