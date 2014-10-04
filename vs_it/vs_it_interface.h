@@ -23,49 +23,56 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301, USA
 #include <ctype.h>
 #include <stdio.h>
 #include <stdint.h>
-#include <windows.h>
 #include <VapourSynth.h>
 #include <VSHelper.h>
 #include "emmintrin.h"
+#include <algorithm>
 
 #ifdef _MSC_VER
-#define snprintf(a,b,c) _snprintf_s(a,b,b,c)
-#define stricmp _stricmp
-#define TS_ALIGN __declspec(align(16))
-#define TS_FUNC_ALIGN
+#define alignas(x) __declspec(align(x))
+#define ALIGNED_ARRAY(decl, alignment) alignas(alignment) decl
 #else
-#define TS_ALIGN __attribute__((aligned(16)))
-#define TS_FUNC_ALIGN __attribute__((force_align_arg_pointer))
+#define __forceinline inline
+#define ALIGNED_ARRAY(decl, alignment) __attribute__((aligned(16))) decl
 #endif
-
-#define PARAM_INT(name, def) int name = int64ToIntS(vsapi->propGetInt(in, #name, 0, &err)); if (err) { name = def; }
 
 #define IT_VERSION "0103." "0.3"
 
-#define FAIL_IF_ERROR(cond, ...) {\
-    if (cond) {\
-        snprintf(msg, 200, __VA_ARGS__);\
-        goto fail;\
-    }\
-}
-
 #if !defined(_WIN64)
-#define rax	eax
-#define rbx	ebx
-#define rcx	ecx
-#define rdx	edx
-#define rsi	esi
-#define rdi	edi
-#define rbp	ebp
+#define rax eax
+#define rbx ebx
+#define rcx ecx
+#define rdx edx
+#define rsi esi
+#define rdi edi
+#define rbp ebp
 #else
-#define rax	rax
-#define rbx	rbx
-#define rcx	rcx
-#define rdx	rdx
-#define rsi	rsi
-#define rdi	rdi
-#define rbp	rbp
+#define rax rax
+#define rbx rbx
+#define rcx rcx
+#define rdx rdx
+#define rsi rsi
+#define rdi rdi
+#define rbp rbp
 #endif
 
-#include "IScriptEnvironment.h"
-#include "vs_it.h"
+struct CFrameInfo {
+    char pos;
+    char match;
+    char matchAcc;
+    char ip;
+    char out;
+    char mflag;
+    int diffP0;
+    int diffP1;
+    int diffS0;
+    int diffS1;
+    long ivC, ivP, ivN, ivM;
+    long ivPC, ivPP, ivPN;
+};
+
+struct CTFblockInfo {
+    int cfi;
+    char level;
+    char itype;
+};
