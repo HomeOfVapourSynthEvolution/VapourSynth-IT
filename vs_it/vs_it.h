@@ -114,23 +114,14 @@ public:
     void VS_CC EvalIV_YV12(int n, const VSFrameRef * ref, const VSAPI *vsapi, long &counter, long &counterp);
     void VS_CC MakeDEmap_YV12(const VSFrameRef * ref, const VSAPI *vsapi, int offset);
     void VS_CC MakeMotionMap_YV12(int n, bool flag, const VSAPI *vsapi);
-	// void __stdcall MakeMotionMap2_YV12(int fno, bool flag);
     void VS_CC MakeMotionMap2Max_YV12(int n, const VSAPI *vsapi);
     void VS_CC MakeSimpleBlurMap_YV12(int n, const VSAPI *vsapi);
     void VS_CC CopyCPNField(int n, VSFrameRef * dst, const VSAPI *vsapi);
-	// void __stdcall Deinterlace_YV12(VSFrameRef * dst, int n, int nParameterMode = DI_MODE_DEINTERLACE);
-	// void __stdcall SimpleBlur_YV12(VSFrameRef * dst, int n);
     void VS_CC DeintOneField_YV12(int n, VSFrameRef* dst, const VSAPI *vsapi);
-	// void __stdcall BlendFrame_YV12(VSFrameRef * dst, int base, int n);
-	// void __stdcall ShowInterlaceArea(const VSAPI * vsapi, VSFrameRef * dst, int n);
-	// void __stdcall ShowDifference();
     void VS_CC ChooseBest(int n, const VSAPI *vsapi);
     bool VS_CC CompCP();
-	// bool __stdcall CompCN();
     void VS_CC Decide(int n);
     void VS_CC SetFT(int base, int n, char c);
-	// void __stdcall ReadLog();
-	// void __stdcall WriteLog();
     bool VS_CC DrawPrevFrame(int n, VSFrameRef * dst, const VSAPI *vsapi);
 
 };

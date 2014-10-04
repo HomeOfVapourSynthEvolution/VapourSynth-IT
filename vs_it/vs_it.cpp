@@ -214,8 +214,6 @@ const VSFrameRef* IT::MakeOutput(int n, VSFrameRef* dst, const VSAPI *vsapi)
 	m_iUseFrame = toupper(m_frameInfo[n].match);
 
 #ifdef DEBUG_SHOW_INTERLACE
-	//    ShowInterlaceArea(dst, n);
-	//    PrintDebugInfo(dst, n);
 	USE_MMX2
 		return dst;
 #endif // DEBUG_SHOW_INTERLACE
