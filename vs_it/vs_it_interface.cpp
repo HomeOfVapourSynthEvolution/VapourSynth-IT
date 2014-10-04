@@ -53,8 +53,7 @@ static void VS_CC itCreate(const VSMap *in, VSMap *out, void *userData, VSCore *
     char *msg = msg_buff + strlen(msg_buff);
 
     VSNodeRef * node = vsapi->propGetNode(in, "clip", 0, 0);
-    VSVideoInfo * vi = new VSVideoInfo;
-    *vi = *vsapi->getVideoInfo(node);
+    const VSVideoInfo *vi = vsapi->getVideoInfo(node);
 
     if (!vi->format || vi->width == 0 || vi->height == 0) {
         vsapi->freeNode(node);
@@ -100,7 +99,7 @@ static void VS_CC itCreate(const VSMap *in, VSMap *out, void *userData, VSCore *
     if (err)
         pthreshold = 75;
 
-    IT * d = new IT(vi, node, fps, threshold, pthreshold, vsapi);
+    IT *d = new IT(vi, node, fps, threshold, pthreshold, vsapi);
 
     vsapi->createFilter(in, out, "it", itInit, itGetFrame, itFree, fmParallel, 0, d, core);
     return;
