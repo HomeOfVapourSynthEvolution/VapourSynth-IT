@@ -99,7 +99,7 @@ static void VS_CC itCreate(const VSMap *in, VSMap *out, void *userData, VSCore *
     if (err)
         pthreshold = 75;
 
-    IT *d = new IT(vi, node, fps, threshold, pthreshold, vsapi);
+    IT *d = new IT(new VSVideoInfo(*vi), node, fps, threshold, pthreshold, vsapi);
 
     vsapi->createFilter(in, out, "it", itInit, itGetFrame, itFree, fmParallel, 0, d, core);
     return;
