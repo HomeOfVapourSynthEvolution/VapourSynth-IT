@@ -17,7 +17,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301, USA
 */
 
 #include "vs_it.h"
-#include "IScriptEnvironment.h"
 
 void IT::SetFT(IScriptEnvironment*env, int base, int n, char c)
 {
@@ -30,9 +29,15 @@ void IT::ChooseBest(IScriptEnvironment* env, int n)
 {
 	const VSFrameRef* srcC = env->GetFrame(clipFrame(n));
 	//	MakeMotionMap(m_iCurrentFrame - 1, false);
+#ifdef __SSE
+	SSE_MakeMotionMap_YV12(env, env->m_iCurrentFrame, false);
+	SSE_MakeMotionMap_YV12(env, env->m_iCurrentFrame + 1, false);
+	SSE_MakeDEmap_YV12(env, srcC, 0);
+#else
 	MakeMotionMap_YV12(env, env->m_iCurrentFrame, false);
 	MakeMotionMap_YV12(env, env->m_iCurrentFrame + 1, false);
 	MakeDEmap_YV12(env, srcC, 0);
+#endif
 	EvalIV_YV12(env, n, srcC, env->m_iSumC, env->m_iSumPC);
 	const VSFrameRef* srcP = env->GetFrame(clipFrame(n - 1));
 	EvalIV_YV12(env, n, srcP, env->m_iSumP, env->m_iSumPP);
@@ -80,7 +85,11 @@ void IT::EvalIV_YV12(IScriptEnvironment *env, int n, const VSFrameRef * ref, lon
 		th2[i] = 6;
 	}
 
+#ifdef __SSE
+	SSE_MakeDEmap_YV12(env, ref, 1);
+#else
 	MakeDEmap_YV12(env, ref, 1);
+#endif
 
 	const int widthminus16 = (width - 16) >> 1;
 	int sum = 0, sum2 = 0;
@@ -448,12 +457,6 @@ bool IT::CompCP(IScriptEnvironment*env)
 			return false;
 		}
 	}
-	//	env->m_frameInfo[clipFrame(n)].matchAcc = '0';
-	//	if (env->m_iSumC > env->m_iSumP) {
-	//	} else {
-	//		env->m_iUseFrame = 'C';
-	//		return false;
-	//	}
 	env->m_frameInfo[n].pos = '.';
 	if (env->m_iSumP >= env->m_iSumC) {
 		env->m_iUseFrame = 'C';
@@ -489,14 +492,11 @@ bool IT::DrawPrevFrame(IScriptEnvironment*env, VSFrameRef * dst, int n)
 	env->m_iCurrentFrame = nOldCurrentFrame;
 
 	if (env->m_frameInfo[nPrevFrame].ip == 'P' && env->m_frameInfo[nNextFrame].ip == 'P')
-	{
 		bResult = CheckSceneChange(env, n);
-	}
 
 	if (bResult)
 	{
 		env->m_iUseFrame = env->m_frameInfo[nPrevFrame].match;
-
 		CopyCPNField(env, dst, nPrevFrame);
 	}
 
@@ -542,7 +542,7 @@ void IT::CopyCPNField(IScriptEnvironment* env, VSFrameRef * dst, int n)
             vs_bitblt(env->DYP(dst, y, 2), nPitchU, env->SYP(srcR, y, 2), nPitchU, nRowSizeU, 1);
 		}
 	}
-	USE_MMX2;
+	// USE_MMX2;
 	if (srcC != srcR)
 		env->FreeFrame(srcR);
 	env->FreeFrame(srcC);
