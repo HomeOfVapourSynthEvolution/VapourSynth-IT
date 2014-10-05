@@ -20,23 +20,21 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301, USA
 
 typedef IT INSTANCE;
 
-void VS_CC
-itInit(VSMap *in, VSMap *out, void **instanceData, VSNode *node, VSCore *core, const VSAPI *vsapi)
+void VS_CC itInit(VSMap *in, VSMap *out, void **instanceData, VSNode *node, VSCore *core, const VSAPI *vsapi)
 {
 	INSTANCE *d = *(INSTANCE**)instanceData;
 	vsapi->setVideoInfo(d->vi, 1, node);
 }
 
-void VS_CC
-itFree(void *instanceData, VSCore *core, const VSAPI *vsapi)
+void VS_CC itFree(void *instanceData, VSCore *core, const VSAPI *vsapi)
 {
 	INSTANCE *d = (INSTANCE*)instanceData;
 	vsapi->freeNode(d->node);
 	delete d;
 }
 
-const VSFrameRef *VS_CC
-itGetFrame(int n, int activationReason, void **instanceData, void **frameData, VSFrameContext *frameCtx, VSCore *core, const VSAPI *vsapi)
+const VSFrameRef *VS_CC itGetFrame(int n, int activationReason, void **instanceData, void **frameData,
+                                   VSFrameContext *frameCtx, VSCore *core, const VSAPI *vsapi)
 {
 	INSTANCE *d = *(INSTANCE**)instanceData;
 	IScriptEnvironment env(frameCtx, core, vsapi, d->node);
@@ -51,8 +49,8 @@ itGetFrame(int n, int activationReason, void **instanceData, void **frameData, V
 	return d->GetFrame(&env, n);
 }
 
-static void VS_CC
-itCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core, const VSAPI *vsapi) {
+static void VS_CC itCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core, const VSAPI *vsapi)
+{
 	int err;
 	char msg_buff[256] = "IT(" IT_VERSION "): ";
 	char *msg = msg_buff + strlen(msg_buff);
@@ -61,22 +59,37 @@ itCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core, const VSAPI 
 	VSVideoInfo * vi = new VSVideoInfo;
 	*vi = *vsapi->getVideoInfo(node);
 
-	FAIL_IF_ERROR(!vi->format || vi->width == 0 || vi->height == 0,
-		"clip must be constant format");
+    if (!vi->format || vi->width == 0 || vi->height == 0) {
+        vsapi->freeNode(node);
+        vsapi->setError(out, "clip must be constant format");
+        return;
+    }
 
-	FAIL_IF_ERROR(vi->format->sampleType != stInteger ||
-		vi->format->bitsPerSample != 8 ||
-		vi->format->colorFamily != cmYUV,
-		"only YUV420P8 input supported. You can you up.");
+    if (vi->format->sampleType != stInteger ||
+        vi->format->bitsPerSample != 8 ||
+        vi->format->colorFamily != cmYUV) {
+        vsapi->freeNode(node);
+        vsapi->setError(out, "only YUV420P8 input supported. You can you up.");
+        return;
+    }
 
-	FAIL_IF_ERROR(vi->width & 15,
-		"width must be mod 16");
+    if (vi->width & 15) {
+        vsapi->freeNode(node);
+        vsapi->setError(out, "width must be mod 16");
+        return;
+    }
 
-	FAIL_IF_ERROR(vi->height & 1,
-		"height must be even");
+    if (vi->height & 1) {
+        vsapi->freeNode(node);
+        vsapi->setError(out, "height must be even");
+        return;
+    }
 
-	FAIL_IF_ERROR(vi->width > MAX_WIDTH,
-		"width too large, exceeding " STR(MAX_WIDTH));
+    if (vi->width > MAX_WIDTH) {
+        vsapi->freeNode(node);
+        vsapi->setError(out, "width too large");
+        return;
+    }
 
 	PARAM_INT(fps, 24);
 	PARAM_INT(threshold, 20);
@@ -86,15 +99,9 @@ itCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core, const VSAPI 
 
 	vsapi->createFilter(in, out, "it", itInit, itGetFrame, itFree, fmParallel, 0, d, core);
 	return;
-
-fail:
-	vsapi->freeNode(node);
-	vsapi->setError(out, msg_buff);
 }
 
-VS_EXTERNAL_API(void)
-VapourSynthPluginInit(VSConfigPlugin configFunc,
-VSRegisterFunction registerFunc, VSPlugin *plugin)
+VS_EXTERNAL_API(void) VapourSynthPluginInit(VSConfigPlugin configFunc, VSRegisterFunction registerFunc, VSPlugin *plugin)
 {
 	configFunc("in.7086.it", "it",
 		"VapourSynth IVTC Filter v" IT_VERSION,

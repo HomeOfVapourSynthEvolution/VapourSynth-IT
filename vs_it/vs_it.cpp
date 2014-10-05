@@ -67,7 +67,7 @@ void IT::GetFramePre(IScriptEnvironment* env, int n)
 		env->vsapi->requestFrameFilter(n, node, env->frameCtx);
 }
 
-PVideoFrame IT::GetFrame(IScriptEnvironment* env, int n)
+const VSFrameRef *IT::GetFrame(IScriptEnvironment* env, int n)
 {
 	++m_iCounter;
 	env->m_iRealFrame = n;
@@ -116,7 +116,7 @@ PVideoFrame IT::GetFrame(IScriptEnvironment* env, int n)
 
 		bool iflag = true;
 		for (i = 0; i < 5; ++i) {
-			if (FII(base + i).ivC >= m_iPThreshold) {
+			if (env->m_frameInfo[clipFrame(base + i)].ivC >= m_iPThreshold) {
 				iflag = false;
 			}
 		}
@@ -128,7 +128,7 @@ PVideoFrame IT::GetFrame(IScriptEnvironment* env, int n)
 		}
 		int no = tfFrame - base;
 		for (i = 0; i < 5; ++i) {
-			char f = FII(base + i).mflag;
+			char f = env->m_frameInfo[clipFrame(base + i)].mflag;
 			if (f != 'D' && f != 'd' && f != 'X' && f != 'x' && f != 'y' && f != 'z' && f != 'R') {
 				if (no == 0)
 					break;

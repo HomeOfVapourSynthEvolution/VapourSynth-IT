@@ -19,26 +19,26 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301, USA
 #include "vs_it.h"
 #include "vs_it_interface.h"
 
-void __stdcall IT::Decide(IScriptEnvironment*env, int n)
+void VS_CC IT::Decide(IScriptEnvironment*env, int n)
 {
 	if (env->m_blockInfo[n / 5].level != 'U')
 		return;
 
 	int base = (n / 5) * 5;
 	int i;
-	int min0 = FII(base).diffP0;
+    int min0 = env->m_frameInfo[clipFrame(base)].diffP0;
 	for (i = 1; i < 5; ++i) {
-		min0 = min(min0, FII(base + i).diffP0);
+        min0 = std::min(min0, env->m_frameInfo[clipFrame(base + i)].diffP0);
 	}
 	int mmin = AdjPara(50);
 
 	for (i = 0; i < 5; ++i) {
-		int m = FII(base + i).diffP0;
-		if (m >= max(mmin, min0) * 5) {
-			FII(base + i).mflag = '.';
+		int m = env->m_frameInfo[clipFrame(base + i)].diffP0;
+        if (m >= std::max(mmin, min0) * 5) {
+			env->m_frameInfo[clipFrame(base + i)].mflag = '.';
 		}
 		else {
-			FII(base + i).mflag = '+';
+			env->m_frameInfo[clipFrame(base + i)].mflag = '+';
 		}
 	}
 	//  const int motion1 = 100;
@@ -46,7 +46,7 @@ void __stdcall IT::Decide(IScriptEnvironment*env, int n)
 	int ncf = 0;
 	int cfi = -1;
 	for (i = 0; i < 5; ++i) {
-		if (FII(base + i).mflag == '.')
+		if (env->m_frameInfo[clipFrame(base + i)].mflag == '.')
 			++ncf;
 		else
 			cfi = i;
@@ -54,23 +54,23 @@ void __stdcall IT::Decide(IScriptEnvironment*env, int n)
 
 	int mmin2 = AdjPara(50);
 	if (ncf == 0) {
-		min0 = FII(base).diffS0;
+		min0 = env->m_frameInfo[clipFrame(base)].diffS0;
 		for (i = 1; i < 5; ++i) {
-			min0 = min(min0, FII(base + i).diffS0);
+            min0 = std::min(min0, env->m_frameInfo[clipFrame(base + i)].diffS0);
 		}
 		for (i = 0; i < 5; ++i) {
-			int m = FII(base + i).diffS0;
-			if (m >= max(mmin2, min0) * 3) {
-				FII(base + i).mflag = '.';
+			int m = env->m_frameInfo[clipFrame(base + i)].diffS0;
+            if (m >= std::max(mmin2, min0) * 3) {
+				env->m_frameInfo[clipFrame(base + i)].mflag = '.';
 			}
 			else {
-				FII(base + i).mflag = '+';
+				env->m_frameInfo[clipFrame(base + i)].mflag = '+';
 			}
 		}
 		ncf = 0;
 		cfi = -1;
 		for (i = 0; i < 5; ++i) {
-			if (FII(base + i).mflag == '.')
+			if (env->m_frameInfo[clipFrame(base + i)].mflag == '.')
 				++ncf;
 			else
 				cfi = i;
@@ -87,27 +87,27 @@ void __stdcall IT::Decide(IScriptEnvironment*env, int n)
 			int rr = (i + 2 + 5) % 5;
 			int r = (i + 1 + 5) % 5;
 			int l = (i - 1 + 5) % 5;
-			if (FII(base + i).mflag != '.' && FII(base + i).match == 'P') {
-				if (FII(base + i).mflag == '+') {
-					FII(base + i).mflag = '*';
+			if (env->m_frameInfo[clipFrame(base + i)].mflag != '.' && env->m_frameInfo[clipFrame(base + i)].match == 'P') {
+				if (env->m_frameInfo[clipFrame(base + i)].mflag == '+') {
+					env->m_frameInfo[clipFrame(base + i)].mflag = '*';
 					flag = true;
 				}
-				if (FII(base + r).mflag == '+') {
-					FII(base + r).mflag = '*';
+				if (env->m_frameInfo[clipFrame(base + r)].mflag == '+') {
+					env->m_frameInfo[clipFrame(base + r)].mflag = '*';
 					flag = true;
 				}
-				if (FII(base + l).mflag == '+') {
-					FII(base + l).mflag = '*';
+				if (env->m_frameInfo[clipFrame(base + l)].mflag == '+') {
+					env->m_frameInfo[clipFrame(base + l)].mflag = '*';
 					flag = true;
 				}
 			}
-			if (FII(base + i).match == 'N') {
-				if (FII(base + r).mflag == '+') {
-					FII(base + r).mflag = '*';
+			if (env->m_frameInfo[clipFrame(base + i)].match == 'N') {
+				if (env->m_frameInfo[clipFrame(base + r)].mflag == '+') {
+					env->m_frameInfo[clipFrame(base + r)].mflag = '*';
 					flag = true;
 				}
-				if (FII(base + rr).mflag == '+') {
-					FII(base + rr).mflag = '*';
+				if (env->m_frameInfo[clipFrame(base + rr)].mflag == '+') {
+					env->m_frameInfo[clipFrame(base + rr)].mflag = '*';
 					flag = true;
 				}
 			}
@@ -118,15 +118,15 @@ void __stdcall IT::Decide(IScriptEnvironment*env, int n)
 
 		if (flag) {
 			for (i = 0; i < 5; ++i) {
-				char c = FII(base + i).mflag;
+				char c = env->m_frameInfo[clipFrame(base + i)].mflag;
 				if (c == '+')
-					FII(base + i).mflag = '*';
+					env->m_frameInfo[clipFrame(base + i)].mflag = '*';
 				if (c == '*')
-					FII(base + i).mflag = '+';
+					env->m_frameInfo[clipFrame(base + i)].mflag = '+';
 			}
 		}
 		for (i = 0; i < 5; ++i) {
-			if (FII(base + i).pos == '2') {
+			if (env->m_frameInfo[clipFrame(base + i)].pos == '2') {
 				SetFT(env, base, i, 'd');
 				return;
 			}
@@ -140,7 +140,7 @@ void __stdcall IT::Decide(IScriptEnvironment*env, int n)
 		}
 		int pnpos[5], pncnt = 0;
 		for (i = 0; i < 5; ++i) {
-			if (toupper(FII(base + i).match) == 'P') {
+			if (toupper(env->m_frameInfo[clipFrame(base + i)].match) == 'P') {
 				pnpos[pncnt++] = i;
 			}
 		}
@@ -149,7 +149,7 @@ void __stdcall IT::Decide(IScriptEnvironment*env, int n)
 			if (pnpos[0] == 0 && pnpos[1] == 4) {
 				k = 4;
 			}
-			if (FII(base + k).mflag != '.') {
+			if (env->m_frameInfo[clipFrame(base + k)].mflag != '.') {
 				SetFT(env, base, k, 'x');
 				return;
 			}
@@ -157,7 +157,7 @@ void __stdcall IT::Decide(IScriptEnvironment*env, int n)
 
 		pncnt = 0;
 		for (i = 0; i < 5; ++i) {
-			if (toupper(FII(base + i).match) != 'N') {
+			if (toupper(env->m_frameInfo[clipFrame(base + i)].match) != 'N') {
 				pnpos[pncnt++] = i;
 			}
 		}
@@ -167,14 +167,14 @@ void __stdcall IT::Decide(IScriptEnvironment*env, int n)
 				k = 4;
 			}
 			k = (k + 2) % 5;
-			if (FII(base + k).mflag != '.') {
+			if (env->m_frameInfo[clipFrame(base + k)].mflag != '.') {
 				SetFT(env, base, k, 'x');
 				return;
 			}
 		}
 
 		for (i = 0; i < 5; ++i) {
-			if (FII(base + i).mflag == '+') {
+			if (env->m_frameInfo[clipFrame(base + i)].mflag == '+') {
 				SetFT(env, base, i, 'd');
 				return;
 			}
@@ -182,9 +182,9 @@ void __stdcall IT::Decide(IScriptEnvironment*env, int n)
 	}
 
 	cfi = 0;
-	int minx = FII(base).diffS0;
+	int minx = env->m_frameInfo[clipFrame(base)].diffS0;
 	for (i = 1; i < 5; ++i) {
-		int m = FII(base + i).diffS0;
+		int m = env->m_frameInfo[clipFrame(base + i)].diffS0;
 		if (m < minx) {
 			cfi = i;
 			minx = m;
@@ -233,7 +233,7 @@ void IT::DeintOneField_YV12(IScriptEnvironment*env, VSFrameRef* dst, int n)
 
 	unsigned char *pFieldMap;
 	pFieldMap = new unsigned char[width * height];
-	ZeroMemory(pFieldMap, width * height);
+    memset(pFieldMap, 0, width * height);
 	int x, y;
 	for (y = 0; y < height; y += 1)
 	{
@@ -270,25 +270,25 @@ void IT::DeintOneField_YV12(IScriptEnvironment*env, VSFrameRef* dst, int n)
 		pC = env->SYP(srcC, y);
 		pB = env->SYP(srcR, y + 1);
 		pBB = env->SYP(srcC, y + 2);
-		pC_U = env->SYP(srcC, y, PLANAR_U);
-		pB_U = env->SYP(srcR, y + 1, PLANAR_U);
-		pBB_U = env->SYP(srcC, y + 4, PLANAR_U);
-		pC_V = env->SYP(srcC, y, PLANAR_V);
-		pB_V = env->SYP(srcR, y + 1, PLANAR_V);
-		pBB_V = env->SYP(srcC, y + 4, PLANAR_V);
+		pC_U = env->SYP(srcC, y, 1);
+		pB_U = env->SYP(srcR, y + 1, 1);
+		pBB_U = env->SYP(srcC, y + 4, 1);
+		pC_V = env->SYP(srcC, y, 2);
+		pB_V = env->SYP(srcR, y + 1, 2);
+		pBB_V = env->SYP(srcC, y + 4, 2);
 
 		pDC = env->DYP(dst, y);
 		pDB = env->DYP(dst, y + 1);
-		pDC_U = env->DYP(dst, y, PLANAR_U);
-		pDB_U = env->DYP(dst, y + 1, PLANAR_U);
-		pDC_V = env->DYP(dst, y, PLANAR_V);
-		pDB_V = env->DYP(dst, y + 1, PLANAR_V);
+		pDC_U = env->DYP(dst, y, 1);
+		pDB_U = env->DYP(dst, y + 1, 1);
+		pDC_V = env->DYP(dst, y, 2);
+		pDB_V = env->DYP(dst, y + 1, 2);
 
-		env->BitBlt(pDC, nPitchDst, pC, nPitchSrc, nRowSizeDst, 1);
+        vs_bitblt(pDC, nPitchDst, pC, nPitchSrc, nRowSizeDst, 1);
 		if ((y >> 1) % 2)
 		{
-			env->BitBlt(pDC_U, nPitchDstU, pC_U, nPitchSrcU, nRowSizeDstU, 1);
-			env->BitBlt(pDC_V, nPitchDstU, pC_V, nPitchSrcU, nRowSizeDstU, 1);
+            vs_bitblt(pDC_U, nPitchDstU, pC_U, nPitchSrcU, nRowSizeDstU, 1);
+            vs_bitblt(pDC_V, nPitchDstU, pC_V, nPitchSrcU, nRowSizeDstU, 1);
 		}
 
 		const unsigned char *pFM = pFieldMap + width * clipY(y);
@@ -299,7 +299,7 @@ void IT::DeintOneField_YV12(IScriptEnvironment*env, VSFrameRef* dst, int n)
 			if ((pFM[x - 1] == 1 || pFM[x] == 1 || pFM[x + 1] == 1) ||
 				(pFMB[x - 1] == 1 || pFMB[x] == 1 || pFMB[x + 1] == 1))
 			{
-				pDB[x] = BYTE((pC[x] + pBB[x] + 1) >> 1);
+				pDB[x] = (unsigned char)((pC[x] + pBB[x] + 1) >> 1);
 			}
 			else
 			{
@@ -308,8 +308,8 @@ void IT::DeintOneField_YV12(IScriptEnvironment*env, VSFrameRef* dst, int n)
 
 			if ((y >> 1) % 2)
 			{
-				pDB_U[x_half] = BYTE((pC_U[x_half] + pBB_U[x_half] + 1) >> 1);
-				pDB_V[x_half] = BYTE((pC_V[x_half] + pBB_V[x_half] + 1) >> 1);
+                pDB_U[x_half] = (unsigned char)((pC_U[x_half] + pBB_U[x_half] + 1) >> 1);
+                pDB_V[x_half] = (unsigned char)((pC_V[x_half] + pBB_V[x_half] + 1) >> 1);
 			}
 		}
 	}
@@ -428,12 +428,12 @@ void IT::MakeMotionMap2Max_YV12(IScriptEnvironment*env, int n)
 			const unsigned char *pC = env->SYP(srcC, y);
 			const unsigned char *pP = env->SYP(srcP, y);
 			const unsigned char *pN = env->SYP(srcN, y);
-			const unsigned char *pC_U = env->SYP(srcC, y, PLANAR_U);
-			const unsigned char *pP_U = env->SYP(srcP, y, PLANAR_U);
-			const unsigned char *pN_U = env->SYP(srcN, y, PLANAR_U);
-			const unsigned char *pC_V = env->SYP(srcC, y, PLANAR_V);
-			const unsigned char *pP_V = env->SYP(srcP, y, PLANAR_V);
-			const unsigned char *pN_V = env->SYP(srcN, y, PLANAR_V);
+			const unsigned char *pC_U = env->SYP(srcC, y, 1);
+			const unsigned char *pP_U = env->SYP(srcP, y, 1);
+			const unsigned char *pN_U = env->SYP(srcN, y, 1);
+			const unsigned char *pC_V = env->SYP(srcC, y, 2);
+			const unsigned char *pP_V = env->SYP(srcP, y, 2);
+			const unsigned char *pN_V = env->SYP(srcN, y, 2);
 
 			_asm {
 				mov rdi, pD

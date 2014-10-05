@@ -21,7 +21,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301, USA
 
 void IT::SetFT(IScriptEnvironment*env, int base, int n, char c)
 {
-	FI(mflag, base + n) = c;
+    env->m_frameInfo[clipFrame(base + n)].mflag = c;
 	env->m_blockInfo[base / 5].cfi = n;
 	env->m_blockInfo[base / 5].level = '0';
 }
@@ -90,12 +90,12 @@ void IT::EvalIV_YV12(IScriptEnvironment *env, int n, const VSFrameRef * ref, lon
 		const unsigned char *pT = env->SYP(srcC, y - 1);
 		const unsigned char *pC = env->SYP(ref, y);
 		const unsigned char *pB = env->SYP(srcC, y + 1);
-		const unsigned char *pT_U = env->SYP(srcC, y - 1, PLANAR_U);
-		const unsigned char *pC_U = env->SYP(ref, y, PLANAR_U);
-		const unsigned char *pB_U = env->SYP(srcC, y + 1, PLANAR_U);
-		const unsigned char *pT_V = env->SYP(srcC, y - 1, PLANAR_V);
-		const unsigned char *pC_V = env->SYP(ref, y, PLANAR_V);
-		const unsigned char *pB_V = env->SYP(srcC, y + 1, PLANAR_V);
+		const unsigned char *pT_U = env->SYP(srcC, y - 1, 1);
+		const unsigned char *pC_U = env->SYP(ref, y, 1);
+		const unsigned char *pB_U = env->SYP(srcC, y + 1, 1);
+		const unsigned char *pT_V = env->SYP(srcC, y - 1, 2);
+		const unsigned char *pC_V = env->SYP(ref, y, 2);
+		const unsigned char *pB_V = env->SYP(srcC, y + 1, 2);
 
 		const unsigned char *peT = &env->m_edgeMap[clipY(y - 1) * width];
 		const unsigned char *peC = &env->m_edgeMap[clipY(y) * width];
@@ -195,12 +195,12 @@ void IT::MakeDEmap_YV12(IScriptEnvironment*env, const VSFrameRef * ref, int offs
 		const unsigned char *pTT = env->SYP(ref, y - 2);
 		const unsigned char *pC = env->SYP(ref, y);
 		const unsigned char *pBB = env->SYP(ref, y + 2);
-		const unsigned char *pTT_U = env->SYP(ref, y - 2, PLANAR_U);
-		const unsigned char *pC_U = env->SYP(ref, y, PLANAR_U);
-		const unsigned char *pBB_U = env->SYP(ref, y + 2, PLANAR_U);
-		const unsigned char *pTT_V = env->SYP(ref, y - 2, PLANAR_V);
-		const unsigned char *pC_V = env->SYP(ref, y, PLANAR_V);
-		const unsigned char *pBB_V = env->SYP(ref, y + 2, PLANAR_V);
+		const unsigned char *pTT_U = env->SYP(ref, y - 2, 1);
+		const unsigned char *pC_U = env->SYP(ref, y, 1);
+		const unsigned char *pBB_U = env->SYP(ref, y + 2, 1);
+		const unsigned char *pTT_V = env->SYP(ref, y - 2, 2);
+		const unsigned char *pC_V = env->SYP(ref, y, 2);
+		const unsigned char *pBB_V = env->SYP(ref, y + 2, 2);
 		unsigned char *pED = env->m_edgeMap + y * width;
 		__asm {
 			mov rdi, pED
@@ -260,8 +260,8 @@ void IT::MakeMotionMap_YV12(IScriptEnvironment*env, int n, bool flag)
 
 	const VSFrameRef* srcP = env->GetFrame(clipFrame(n - 1));
 	const VSFrameRef* srcC = env->GetFrame(n);
-	TS_ALIGN short bufP0[MAX_WIDTH];
-	TS_ALIGN unsigned char bufP1[MAX_WIDTH];
+    ALIGNED_ARRAY(short bufP0[MAX_WIDTH], 16);
+    ALIGNED_ARRAY(unsigned char bufP1[MAX_WIDTH], 16);
 	int pe0 = 0, po0 = 0, pe1 = 0, po1 = 0;
 	for (int yy = 16; yy < height - 16; ++yy) {
 		int y = yy;
@@ -552,15 +552,15 @@ void IT::CopyCPNField(IScriptEnvironment* env, VSFrameRef * dst, int n)
 		int y, yo;
 		y = yy + 1;
 		yo = yy + 0;
-		env->BitBlt(env->DYP(dst, yo), nPitch, env->SYP(srcC, yo), nPitch, nRowSize, 1);
-		env->BitBlt(env->DYP(dst, y), nPitch, env->SYP(srcR, y), nPitch, nRowSize, 1);
+        vs_bitblt(env->DYP(dst, yo), nPitch, env->SYP(srcC, yo), nPitch, nRowSize, 1);
+        vs_bitblt(env->DYP(dst, y), nPitch, env->SYP(srcR, y), nPitch, nRowSize, 1);
 
 		if ((yy >> 1) % 2)
 		{
-			env->BitBlt(env->DYP(dst, yo, PLANAR_U), nPitchU, env->SYP(srcC, yo, PLANAR_U), nPitchU, nRowSizeU, 1);
-			env->BitBlt(env->DYP(dst, y, PLANAR_U), nPitchU, env->SYP(srcR, y, PLANAR_U), nPitchU, nRowSizeU, 1);
-			env->BitBlt(env->DYP(dst, yo, PLANAR_V), nPitchU, env->SYP(srcC, yo, PLANAR_V), nPitchU, nRowSizeU, 1);
-			env->BitBlt(env->DYP(dst, y, PLANAR_V), nPitchU, env->SYP(srcR, y, PLANAR_V), nPitchU, nRowSizeU, 1);
+            vs_bitblt(env->DYP(dst, yo, 1), nPitchU, env->SYP(srcC, yo, 1), nPitchU, nRowSizeU, 1);
+            vs_bitblt(env->DYP(dst, y, 1), nPitchU, env->SYP(srcR, y, 1), nPitchU, nRowSizeU, 1);
+            vs_bitblt(env->DYP(dst, yo, 2), nPitchU, env->SYP(srcC, yo, 2), nPitchU, nRowSizeU, 1);
+            vs_bitblt(env->DYP(dst, y, 2), nPitchU, env->SYP(srcR, y, 2), nPitchU, nRowSizeU, 1);
 		}
 	}
 	USE_MMX2;
