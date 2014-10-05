@@ -38,7 +38,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301, USA
 
 #define PARAM_INT(name, def) int name = int64ToIntS(vsapi->propGetInt(in, #name, 0, &err)); if (err) { name = def; }
 
-#define IT_VERSION "0103." "0.3"
+#define IT_VERSION "0103." "0.4"
 
 #if !defined(_WIN64)
 #define rax	eax
