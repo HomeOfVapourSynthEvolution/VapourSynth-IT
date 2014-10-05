@@ -28,14 +28,14 @@ void VS_CC IT::Decide(IScriptEnvironment*env, int n)
 	int i;
     int min0 = env->m_frameInfo[clipFrame(base)].diffP0;
 	for (i = 1; i < 5; ++i) {
-        min0 = std::min(min0, env->m_frameInfo[clipFrame(base + i)].diffP0);
+        min0 = VSMIN(min0, env->m_frameInfo[clipFrame(base + i)].diffP0);
 	}
 	int mmin = AdjPara(50);
 
 	for (i = 0; i < 5; ++i)
 	{
 		int m = env->m_frameInfo[clipFrame(base + i)].diffP0;
-		env->m_frameInfo[clipFrame(base + i)].mflag = m >= std::max(mmin, min0) * 5 ? '.' : '+';
+		env->m_frameInfo[clipFrame(base + i)].mflag = m >= VSMAX(mmin, min0) * 5 ? '.' : '+';
 	}
 
 	int ncf = 0;
@@ -51,12 +51,12 @@ void VS_CC IT::Decide(IScriptEnvironment*env, int n)
 	if (ncf == 0) {
 		min0 = env->m_frameInfo[clipFrame(base)].diffS0;
 		for (i = 1; i < 5; ++i) {
-            min0 = std::min(min0, env->m_frameInfo[clipFrame(base + i)].diffS0);
+            min0 = VSMIN(min0, env->m_frameInfo[clipFrame(base + i)].diffS0);
 		}
 		for (i = 0; i < 5; ++i)
 		{
 			int m = env->m_frameInfo[clipFrame(base + i)].diffS0;
-			env->m_frameInfo[clipFrame(base + i)].mflag = m >= std::max(mmin2, min0) * 3 ? '.' : '+';
+			env->m_frameInfo[clipFrame(base + i)].mflag = m >= VSMAX(mmin2, min0) * 3 ? '.' : '+';
 		}
 		ncf = 0;
 		cfi = -1;

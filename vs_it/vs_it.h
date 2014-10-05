@@ -51,23 +51,23 @@ public:
 		return (((v * width) / 720) * height) / 480;
 	}
     __forceinline int clipFrame(int n) {
-		return std::max(0, std::min(n, m_iMaxFrames - 1));
+		return VSMAX(0, VSMIN(n, m_iMaxFrames - 1));
 	}
     __forceinline int clipX(int x) {
-		return std::max(0, std::min(width - 1, x));
+		return VSMAX(0, VSMIN(width - 1, x));
 	}
     __forceinline int clipY(int y) {
-        return std::max(0, std::min(height - 1, y));
+        return VSMAX(0, VSMIN(height - 1, y));
 	}
     __forceinline int clipYH(int y) {
-        return std::max(0, std::min((height >> 1) - 1, y));
+        return VSMAX(0, VSMIN((height >> 1) - 1, y));
 	}
-    __forceinline unsigned char* B2YP(unsigned char *dst, int y) {
-        y = std::max(0, std::min(height - 1, y));
+	__forceinline unsigned char* B2YP(unsigned char *dst, int y) {
+		y = VSMAX(0, VSMIN(height - 1, y));
 		return dst + y * width * 2;
 	}
     __forceinline unsigned char* BYP(unsigned char *dst, int y) {
-        y = std::max(0, std::min(height - 1, y));
+        y = VSMAX(0, VSMIN(height - 1, y));
 		return dst + y * width;
 	}
     void VS_CC GetFramePre(IScriptEnvironment* env, int n);
