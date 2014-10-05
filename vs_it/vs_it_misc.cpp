@@ -381,8 +381,6 @@ bool IT::CompCP(IScriptEnvironment*env)
 	int ps1 = env->m_frameInfo[n].diffS1;
 	int ns0 = env->m_frameInfo[clipFrame(n + 1)].diffS0;
 	int ns1 = env->m_frameInfo[clipFrame(n + 1)].diffS1;
-	//	int th = 5;
-	//	int thm = 5;
 
 	int th = AdjPara(5);
 	int thm = AdjPara(5);
@@ -402,25 +400,15 @@ bool IT::CompCP(IScriptEnvironment*env)
 	int thcomb = AdjPara(20);
 	if (n != 0) {
 		if ((env->m_iSumC < thcomb && env->m_iSumP < thcomb) || abs(env->m_iSumC - env->m_iSumP) * 10 < env->m_iSumC + env->m_iSumP) {
-			if (abs(env->m_iSumC - env->m_iSumP) > AdjPara(8)) {
-				if (env->m_iSumP >= env->m_iSumC) {
-					env->m_iUseFrame = 'c';
-					return true;
-				}
-				else {
-					env->m_iUseFrame = 'p';
-					return true;
-				}
+			if (abs(env->m_iSumC - env->m_iSumP) > AdjPara(8))
+			{
+				env->m_iUseFrame = env->m_iSumP >= env->m_iSumC ? 'c' : 'p';
+				return true;
 			}
-			if (abs(env->m_iSumPC - env->m_iSumPP) > AdjPara(10)) {
-				if (env->m_iSumPP >= env->m_iSumPC) {
-					env->m_iUseFrame = 'c';
-					return true;
-				}
-				else {
-					env->m_iUseFrame = 'p';
-					return true;
-				}
+			if (abs(env->m_iSumPC - env->m_iSumPP) > AdjPara(10))
+			{
+				env->m_iUseFrame = env->m_iSumPP >= env->m_iSumPC ? 'c' : 'p';
+				return true;
 			}
 
 			if (spe && mpo) {
@@ -452,15 +440,12 @@ bool IT::CompCP(IScriptEnvironment*env)
 				return false;
 			}
 
-			//			return (env->m_iSumPC > env->m_iSumPP);
 			if (env->m_iSumPC > env->m_iSumPP) {
 				env->m_iUseFrame = 'p';
 				return true;
 			}
-			else {
-				env->m_iUseFrame = 'c';
-				return false;
-			}
+			env->m_iUseFrame = 'c';
+			return false;
 		}
 	}
 	//	env->m_frameInfo[clipFrame(n)].matchAcc = '0';
@@ -475,7 +460,6 @@ bool IT::CompCP(IScriptEnvironment*env)
 		if (!spe) {
 			env->m_frameInfo[n].pos = '.';
 		}
-		return true;
 	}
 	else {
 		env->m_iUseFrame = 'P';
@@ -485,8 +469,8 @@ bool IT::CompCP(IScriptEnvironment*env)
 		if (!spe && sno) {
 			env->m_frameInfo[n].pos = '3';
 		}
-		return true;
 	}
+	return true;
 }
 
 bool IT::DrawPrevFrame(IScriptEnvironment*env, VSFrameRef * dst, int n)

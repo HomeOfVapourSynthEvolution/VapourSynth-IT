@@ -33,7 +33,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301, USA
 #define ALIGNED_ARRAY(decl, alignment) alignas(alignment) decl
 #else
 #define __forceinline inline
-#define ALIGNED_ARRAY(decl, alignment) __attribute__((aligned(16))) decl
+#define ALIGNED_ARRAY(decl, alignment) __attribute__((aligned(alignment))) decl
 #endif
 
 #define PARAM_INT(name, def) int name = int64ToIntS(vsapi->propGetInt(in, #name, 0, &err)); if (err) { name = def; }

@@ -18,17 +18,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301, USA
 
 #include "vs_it.h"
 
-IT::IT(VSVideoInfo * vi,
-	VSNodeRef * node,
-	int _fps,
-	int _threshold,
-	int _pthreshold,
-	const VSAPI *vsapi) :
-	vi(vi),
-	node(node),
-	m_iFPS(_fps),
-	m_iThreshold(_threshold),
-	m_iPThreshold(_pthreshold)
+IT::IT(VSVideoInfo * vi, VSNodeRef * node, int _fps, int _threshold, int _pthreshold, const VSAPI *vsapi) :
+vi(vi),
+node(node),
+m_iFPS(_fps),
+m_iThreshold(_threshold),
+m_iPThreshold(_pthreshold)
 {
 	m_iMaxFrames = vi->numFrames;
 	m_iCounter = 0;
@@ -55,8 +50,7 @@ IT::IT(VSVideoInfo * vi,
 
 void IT::GetFramePre(IScriptEnvironment* env, int n)
 {
-	if (m_iFPS == 24)
-	{
+	if (m_iFPS == 24) {
 		int base = n + n / 4;
 		base = (base / 5) * 5;
 		int i;
@@ -74,10 +68,7 @@ const VSFrameRef *IT::GetFrame(IScriptEnvironment* env, int n)
 	env->m_frameInfo = new CFrameInfo[m_iMaxFrames + 6];
 
 	int i;
-	for (i = 0; i < 8; ++i) {
-		m_PVOut[i] = 0;
-		m_iPVOutIndex[i] = -1;
-	}
+
 	for (i = 0; i < m_iMaxFrames + 6; ++i) {
 		env->m_frameInfo[i].match = 'U';
 		env->m_frameInfo[i].matchAcc = 'U';
@@ -94,13 +85,13 @@ const VSFrameRef *IT::GetFrame(IScriptEnvironment* env, int n)
 	}
 
 	env->m_edgeMap = new unsigned char[width * height];
-	memset(env->m_edgeMap, width * height, 0);
+	memset(env->m_edgeMap, 0, width * height);
 
 	env->m_motionMap4DI = new unsigned char[width * height];
-	memset(env->m_motionMap4DI, width * height, 0);
+	memset(env->m_motionMap4DI, 0, width * height);
 
 	env->m_motionMap4DIMax = new unsigned char[width * height];
-	memset(env->m_motionMap4DIMax, width * height, 0);
+	memset(env->m_motionMap4DIMax, 0, width * height);
 
 
 	int tfFrame;
@@ -120,12 +111,7 @@ const VSFrameRef *IT::GetFrame(IScriptEnvironment* env, int n)
 				iflag = false;
 			}
 		}
-		if (iflag) {
-			env->m_blockInfo[base / 5].itype = '3';
-		}
-		else {
-			env->m_blockInfo[base / 5].itype = '2';
-		}
+		env->m_blockInfo[base / 5].itype = iflag ? '3' : '2';
 		int no = tfFrame - base;
 		for (i = 0; i < 5; ++i) {
 			char f = env->m_frameInfo[clipFrame(base + i)].mflag;
@@ -135,8 +121,7 @@ const VSFrameRef *IT::GetFrame(IScriptEnvironment* env, int n)
 				--no;
 			}
 		}
-		if (m_iFPS != 30)
-			n = clipFrame(i + base);
+		n = clipFrame(i + base);
 	}
 	else {
 		GetFrameSub(env, n);
@@ -161,11 +146,11 @@ void IT::GetFrameSub(IScriptEnvironment* env, int n)
 	env->m_iCurrentFrame = n;
 
 	env->m_iUseFrame = 'C';
-	env->m_iSumC = env->m_iSumP = env->m_iSumN = env->m_iSumM = 720 * 480;
+	env->m_iSumC = env->m_iSumP = env->m_iSumN = env->m_iSumM = vi->width * vi->height;
 	env->m_bRefP = true;
 
 	ChooseBest(env, n);
-	env->m_frameInfo[n].match = (unsigned char)env->m_iUseFrame;
+	env->m_frameInfo[n].match = static_cast<unsigned char>(env->m_iUseFrame);
 	switch (toupper(env->m_iUseFrame)) {
 	case 'C':
 		env->m_iSumM = env->m_iSumC;
@@ -188,12 +173,7 @@ void IT::GetFrameSub(IScriptEnvironment* env, int n)
 	env->m_frameInfo[n].ivPC = env->m_iSumPC;
 	env->m_frameInfo[n].ivPP = env->m_iSumPP;
 	env->m_frameInfo[n].ivPN = env->m_iSumPN;
-	if (env->m_iSumM < m_iPThreshold && env->m_iSumPM < m_iPThreshold * 3) {
-		env->m_frameInfo[n].ip = 'P';
-	}
-	else {
-		env->m_frameInfo[n].ip = 'I';
-	}
+	env->m_frameInfo[n].ip = env->m_iSumM < m_iPThreshold && env->m_iSumPM < m_iPThreshold * 3 ? 'P' : 'I';
 	return;
 }
 
@@ -214,13 +194,9 @@ const VSFrameRef* IT::MakeOutput(IScriptEnvironment* env, VSFrameRef* dst, int n
 	env->m_iUseFrame = toupper(env->m_frameInfo[n].match);
 
 	if (env->m_frameInfo[n].ip == 'P')
-	{
 		CopyCPNField(env, dst, n);
-	}
-	else {
-		if (!DrawPrevFrame(env, dst, n))
-			DeintOneField_YV12(env, dst, n);
-	}
+	else if (!DrawPrevFrame(env, dst, n))
+		DeintOneField_YV12(env, dst, n);
 
 	return dst;
 }

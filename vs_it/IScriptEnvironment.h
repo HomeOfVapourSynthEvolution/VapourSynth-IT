@@ -80,18 +80,12 @@ public:
 		y = std::max(0, std::min(vi->height - 1, y));
 		auto rPtr = vsapi->getReadPtr(pv, plane);
 		auto rStr = vsapi->getStride(pv, plane);
-		if (plane == 0)
-			return rPtr + y * rStr;
-		else
-			return rPtr + (((y >> 2) << 1) + (y % 2)) * rStr;
+		return rPtr + (plane == 0 ? y : (y >> 2 << 1) + y % 2) * rStr;
 	}
     __forceinline unsigned char* DYP(VSFrameRef * pv, int y, int plane = 0) {
 		y = std::max(0, std::min(vi->height - 1, y));
 		auto wPtr = vsapi->getWritePtr(pv, plane);
 		auto wStr = vsapi->getStride(pv, plane);
-		if (plane == 0)
-			return wPtr + y * wStr;
-		else
-			return wPtr + (((y >> 2) << 1) + (y % 2)) * wStr;
+		return wPtr + (plane == 0 ? y : (y >> 2 << 1) + y % 2) * wStr;
 	}
 };

@@ -32,14 +32,10 @@ void VS_CC IT::Decide(IScriptEnvironment*env, int n)
 	}
 	int mmin = AdjPara(50);
 
-	for (i = 0; i < 5; ++i) {
+	for (i = 0; i < 5; ++i)
+	{
 		int m = env->m_frameInfo[clipFrame(base + i)].diffP0;
-        if (m >= std::max(mmin, min0) * 5) {
-			env->m_frameInfo[clipFrame(base + i)].mflag = '.';
-		}
-		else {
-			env->m_frameInfo[clipFrame(base + i)].mflag = '+';
-		}
+		env->m_frameInfo[clipFrame(base + i)].mflag = m >= std::max(mmin, min0) * 5 ? '.' : '+';
 	}
 
 	int ncf = 0;
@@ -57,14 +53,10 @@ void VS_CC IT::Decide(IScriptEnvironment*env, int n)
 		for (i = 1; i < 5; ++i) {
             min0 = std::min(min0, env->m_frameInfo[clipFrame(base + i)].diffS0);
 		}
-		for (i = 0; i < 5; ++i) {
+		for (i = 0; i < 5; ++i)
+		{
 			int m = env->m_frameInfo[clipFrame(base + i)].diffS0;
-            if (m >= std::max(mmin2, min0) * 3) {
-				env->m_frameInfo[clipFrame(base + i)].mflag = '.';
-			}
-			else {
-				env->m_frameInfo[clipFrame(base + i)].mflag = '+';
-			}
+			env->m_frameInfo[clipFrame(base + i)].mflag = m >= std::max(mmin2, min0) * 3 ? '.' : '+';
 		}
 		ncf = 0;
 		cfi = -1;
@@ -210,15 +202,15 @@ void IT::DeintOneField_YV12(IScriptEnvironment*env, VSFrameRef* dst, int n)
 		break;
 	}
 
-	const unsigned char *pT;
+	// const unsigned char *pT;
 	const unsigned char *pC;
 	const unsigned char *pB;
 	const unsigned char *pBB;
 	const unsigned char *pC_U;
-	const unsigned char *pB_U;
+	// const unsigned char *pB_U;
 	const unsigned char *pBB_U;
 	const unsigned char *pC_V;
-	const unsigned char *pB_V;
+	// const unsigned char *pB_V;
 	const unsigned char *pBB_V;
 	unsigned char *pDC;
 	unsigned char *pDB;
@@ -265,15 +257,15 @@ void IT::DeintOneField_YV12(IScriptEnvironment*env, VSFrameRef* dst, int n)
 	const int nRowSizeDstU = width >> vi->format->subSamplingW;
 
 	for (y = 0; y < height; y += 2) {
-		pT = env->SYP(srcR, y - 1);
+		// pT = env->SYP(srcR, y - 1);
 		pC = env->SYP(srcC, y);
 		pB = env->SYP(srcR, y + 1);
 		pBB = env->SYP(srcC, y + 2);
 		pC_U = env->SYP(srcC, y, 1);
-		pB_U = env->SYP(srcR, y + 1, 1);
+		// pB_U = env->SYP(srcR, y + 1, 1);
 		pBB_U = env->SYP(srcC, y + 4, 1);
 		pC_V = env->SYP(srcC, y, 2);
-		pB_V = env->SYP(srcR, y + 1, 2);
+		// pB_V = env->SYP(srcR, y + 1, 2);
 		pBB_V = env->SYP(srcC, y + 4, 2);
 
 		pDC = env->DYP(dst, y);
@@ -295,20 +287,14 @@ void IT::DeintOneField_YV12(IScriptEnvironment*env, VSFrameRef* dst, int n)
 		for (x = 0; x < width; ++x)
 		{
 			int x_half = x >> 1;
-			if ((pFM[x - 1] == 1 || pFM[x] == 1 || pFM[x + 1] == 1) ||
-				(pFMB[x - 1] == 1 || pFMB[x] == 1 || pFMB[x + 1] == 1))
-			{
-				pDB[x] = (unsigned char)((pC[x] + pBB[x] + 1) >> 1);
-			}
-			else
-			{
-				pDB[x] = pB[x];
-			}
+			pDB[x] = pFM[x - 1] == 1 || pFM[x] == 1 || pFM[x + 1] == 1 ||
+			         (pFMB[x - 1] == 1 || pFMB[x] == 1 || pFMB[x + 1] == 1) ? 
+					 static_cast<unsigned char>((pC[x] + pBB[x] + 1) >> 1) : pB[x];
 
 			if ((y >> 1) % 2)
 			{
-                pDB_U[x_half] = (unsigned char)((pC_U[x_half] + pBB_U[x_half] + 1) >> 1);
-                pDB_V[x_half] = (unsigned char)((pC_V[x_half] + pBB_V[x_half] + 1) >> 1);
+                pDB_U[x_half] = static_cast<unsigned char>((pC_U[x_half] + pBB_U[x_half] + 1) >> 1);
+                pDB_V[x_half] = static_cast<unsigned char>((pC_V[x_half] + pBB_V[x_half] + 1) >> 1);
 			}
 		}
 	}

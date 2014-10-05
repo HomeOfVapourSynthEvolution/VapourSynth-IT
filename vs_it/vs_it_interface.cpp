@@ -22,13 +22,13 @@ typedef IT INSTANCE;
 
 void VS_CC itInit(VSMap *in, VSMap *out, void **instanceData, VSNode *node, VSCore *core, const VSAPI *vsapi)
 {
-	INSTANCE *d = (INSTANCE*)*instanceData;
+	INSTANCE *d = static_cast<INSTANCE*>(*instanceData);
 	vsapi->setVideoInfo(d->vi, 1, node);
 }
 
 void VS_CC itFree(void *instanceData, VSCore *core, const VSAPI *vsapi)
 {
-	INSTANCE *d = (INSTANCE*)instanceData;
+	INSTANCE *d = static_cast<INSTANCE*>(instanceData);
 	vsapi->freeNode(d->node);
 	delete d;
 }
@@ -36,14 +36,14 @@ void VS_CC itFree(void *instanceData, VSCore *core, const VSAPI *vsapi)
 const VSFrameRef *VS_CC itGetFrame(int n, int activationReason, void **instanceData, void **frameData,
                                    VSFrameContext *frameCtx, VSCore *core, const VSAPI *vsapi)
 {
-	INSTANCE *d = (INSTANCE*)*instanceData;
+	INSTANCE *d = static_cast<INSTANCE*>(*instanceData);
 	IScriptEnvironment env(frameCtx, core, vsapi, d->node);
 	if (activationReason == arInitial) {
 		d->GetFramePre(&env, n);
-		return NULL;
+		return nullptr;
 	}
 	if (activationReason != arAllFramesReady)
-		return NULL;
+		return nullptr;
 
 	return d->GetFrame(&env, n);
 }
@@ -51,8 +51,6 @@ const VSFrameRef *VS_CC itGetFrame(int n, int activationReason, void **instanceD
 static void VS_CC itCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core, const VSAPI *vsapi)
 {
 	int err;
-	char msg_buff[256] = "IT(" IT_VERSION "): ";
-	char *msg = msg_buff + strlen(msg_buff);
 
 	VSNodeRef * node = vsapi->propGetNode(in, "clip", 0, 0);
     const VSVideoInfo *vi = vsapi->getVideoInfo(node);

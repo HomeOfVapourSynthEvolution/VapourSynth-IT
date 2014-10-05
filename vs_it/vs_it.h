@@ -28,13 +28,10 @@ const int MAX_WIDTH = 8192;
 #define USE_MMX2  _asm { emms } _asm { sfence }
 
 class IT {
-private:
 	int m_iPThreshold;
 	int m_iThreshold;
 	int m_iCounter;
 	int m_iFPS;
-	const VSFrameRef* m_PVOut[8];
-	int m_iPVOutIndex[8];
 
 	int width;
 	int height;
@@ -57,8 +54,7 @@ public:
 		return std::max(0, std::min(n, m_iMaxFrames - 1));
 	}
     __forceinline int clipX(int x) {
-        x = std::max(0, std::min(width - 1, x));
-		return x;
+		return std::max(0, std::min(width - 1, x));
 	}
     __forceinline int clipY(int y) {
         return std::max(0, std::min(height - 1, y));
@@ -92,13 +88,13 @@ public:
     void VS_CC SetFT(IScriptEnvironment* env, int base, int n, char c);
     bool VS_CC DrawPrevFrame(IScriptEnvironment* env, VSFrameRef * dst, int n);
 	// Unported method signature below.
-	// void __stdcall MakeMotionMap2_YV12(IScriptEnvironment* env, int fno, bool flag);
-	// void __stdcall Deinterlace_YV12(IScriptEnvironment* env, VSFrameRef * dst, int n, int nParameterMode = DI_MODE_DEINTERLACE);
-	// void __stdcall SimpleBlur_YV12(IScriptEnvironment* env, VSFrameRef * dst, int n);
-	// void __stdcall BlendFrame_YV12(IScriptEnvironment* env, VSFrameRef * dst, int base, int n);
-	// void __stdcall ShowInterlaceArea(const VSAPI * vsapi, VSFrameRef * dst, int n);
-	// void __stdcall ShowDifference();
-	// bool __stdcall CompCN();
-	// void __stdcall ReadLog();
-	// void __stdcall WriteLog();
+	// void VS_CC MakeMotionMap2_YV12(IScriptEnvironment* env, int fno, bool flag);
+	// void VS_CC Deinterlace_YV12(IScriptEnvironment* env, VSFrameRef * dst, int n, int nParameterMode = DI_MODE_DEINTERLACE);
+	// void VS_CC SimpleBlur_YV12(IScriptEnvironment* env, VSFrameRef * dst, int n);
+	// void VS_CC BlendFrame_YV12(IScriptEnvironment* env, VSFrameRef * dst, int base, int n);
+	// void VS_CC ShowInterlaceArea(const VSAPI * vsapi, VSFrameRef * dst, int n);
+	// void VS_CC ShowDifference();
+	// bool VS_CC CompCN();
+	// void VS_CC ReadLog();
+	// void VS_CC WriteLog();
 };
