@@ -22,7 +22,7 @@ typedef IT INSTANCE;
 
 void VS_CC itInit(VSMap *in, VSMap *out, void **instanceData, VSNode *node, VSCore *core, const VSAPI *vsapi)
 {
-	INSTANCE *d = *(INSTANCE**)instanceData;
+	INSTANCE *d = (INSTANCE*)*instanceData;
 	vsapi->setVideoInfo(d->vi, 1, node);
 }
 
@@ -36,15 +36,14 @@ void VS_CC itFree(void *instanceData, VSCore *core, const VSAPI *vsapi)
 const VSFrameRef *VS_CC itGetFrame(int n, int activationReason, void **instanceData, void **frameData,
                                    VSFrameContext *frameCtx, VSCore *core, const VSAPI *vsapi)
 {
-	INSTANCE *d = *(INSTANCE**)instanceData;
+	INSTANCE *d = (INSTANCE*)*instanceData;
 	IScriptEnvironment env(frameCtx, core, vsapi, d->node);
 	if (activationReason == arInitial) {
 		d->GetFramePre(&env, n);
 		return NULL;
 	}
-	if (activationReason != arAllFramesReady) {
+	if (activationReason != arAllFramesReady)
 		return NULL;
-	}
 
 	return d->GetFrame(&env, n);
 }
@@ -56,8 +55,7 @@ static void VS_CC itCreate(const VSMap *in, VSMap *out, void *userData, VSCore *
 	char *msg = msg_buff + strlen(msg_buff);
 
 	VSNodeRef * node = vsapi->propGetNode(in, "clip", 0, 0);
-	VSVideoInfo * vi = new VSVideoInfo;
-	*vi = *vsapi->getVideoInfo(node);
+    const VSVideoInfo *vi = vsapi->getVideoInfo(node);
 
     if (!vi->format || vi->width == 0 || vi->height == 0) {
         vsapi->freeNode(node);
@@ -95,7 +93,7 @@ static void VS_CC itCreate(const VSMap *in, VSMap *out, void *userData, VSCore *
 	PARAM_INT(threshold, 20);
 	PARAM_INT(pthreshold, 75);
 
-	INSTANCE * d = new IT(vi, node, fps, threshold, pthreshold, vsapi);
+	INSTANCE * d = new INSTANCE(new VSVideoInfo(*vi), node, fps, threshold, pthreshold, vsapi);
 
 	vsapi->createFilter(in, out, "it", itInit, itGetFrame, itFree, fmParallel, 0, d, core);
 	return;
