@@ -82,23 +82,23 @@ public:
     void VS_CC EvalIV_YV12(IScriptEnvironment* env, int n, const VSFrameRef * ref, long &counter, long &counterp);
     void VS_CC MakeDEmap_YV12(IScriptEnvironment* env, const VSFrameRef * ref, int offset);
     void VS_CC MakeMotionMap_YV12(IScriptEnvironment* env, int fno, bool flag);
-	// void __stdcall MakeMotionMap2_YV12(IScriptEnvironment* env, int fno, bool flag);
     void VS_CC MakeMotionMap2Max_YV12(IScriptEnvironment* env, int fno);
     void VS_CC MakeSimpleBlurMap_YV12(IScriptEnvironment* env, int fno);
     void VS_CC CopyCPNField(IScriptEnvironment* env, VSFrameRef * dst, int n);
+    void VS_CC DeintOneField_YV12(IScriptEnvironment* env, VSFrameRef * dst, int n);
+    void VS_CC ChooseBest(IScriptEnvironment* env, int n);
+    bool VS_CC CompCP(IScriptEnvironment* env);
+    void VS_CC Decide(IScriptEnvironment* env, int n);
+    void VS_CC SetFT(IScriptEnvironment* env, int base, int n, char c);
+    bool VS_CC DrawPrevFrame(IScriptEnvironment* env, VSFrameRef * dst, int n);
+	// Unported method signature below.
+	// void __stdcall MakeMotionMap2_YV12(IScriptEnvironment* env, int fno, bool flag);
 	// void __stdcall Deinterlace_YV12(IScriptEnvironment* env, VSFrameRef * dst, int n, int nParameterMode = DI_MODE_DEINTERLACE);
 	// void __stdcall SimpleBlur_YV12(IScriptEnvironment* env, VSFrameRef * dst, int n);
-    void VS_CC DeintOneField_YV12(IScriptEnvironment* env, VSFrameRef * dst, int n);
 	// void __stdcall BlendFrame_YV12(IScriptEnvironment* env, VSFrameRef * dst, int base, int n);
 	// void __stdcall ShowInterlaceArea(const VSAPI * vsapi, VSFrameRef * dst, int n);
 	// void __stdcall ShowDifference();
-    void VS_CC ChooseBest(IScriptEnvironment* env, int n);
-    bool VS_CC CompCP(IScriptEnvironment* env);
 	// bool __stdcall CompCN();
-    void VS_CC Decide(IScriptEnvironment* env, int n);
-    void VS_CC SetFT(IScriptEnvironment* env, int base, int n, char c);
 	// void __stdcall ReadLog();
 	// void __stdcall WriteLog();
-    bool VS_CC DrawPrevFrame(IScriptEnvironment* env, VSFrameRef * dst, int n);
-
 };

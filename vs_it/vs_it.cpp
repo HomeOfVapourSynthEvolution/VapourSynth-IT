@@ -213,13 +213,6 @@ const VSFrameRef* IT::MakeOutput(IScriptEnvironment* env, VSFrameRef* dst, int n
 
 	env->m_iUseFrame = toupper(env->m_frameInfo[n].match);
 
-#ifdef DEBUG_SHOW_INTERLACE
-	//    ShowInterlaceArea(dst, n);
-	//    PrintDebugInfo(dst, n);
-	USE_MMX2
-		return dst;
-#endif // DEBUG_SHOW_INTERLACE
-
 	if (env->m_frameInfo[n].ip == 'P')
 	{
 		CopyCPNField(env, dst, n);

@@ -41,7 +41,6 @@ void VS_CC IT::Decide(IScriptEnvironment*env, int n)
 			env->m_frameInfo[clipFrame(base + i)].mflag = '+';
 		}
 	}
-	//  const int motion1 = 100;
 
 	int ncf = 0;
 	int cfi = -1;
@@ -258,12 +257,12 @@ void IT::DeintOneField_YV12(IScriptEnvironment*env, VSFrameRef* dst, int n)
 		}
 	}
 
-	const int nPitchSrc = env->vsapi->getStride(srcC, 0); // srcC->GetPitch();
-	const int nPitchSrcU = env->vsapi->getStride(srcC, 1); // srcC->GetPitch(PLANAR_U);
-	const int nPitchDst = env->vsapi->getStride(dst, 0); // dst->GetPitch();
-	const int nRowSizeDst = width; // dst->GetRowSize(); DIVIDE BY SIZEOF(T)
-	const int nPitchDstU = env->vsapi->getStride(dst, 1); // dst->GetPitch(PLANAR_U);
-	const int nRowSizeDstU = width >> vi->format->subSamplingW; // dst->GetRowSize(PLANAR_U); DIVIDE BY SIZEOF(T)
+	const int nPitchSrc = env->vsapi->getStride(srcC, 0);
+	const int nPitchSrcU = env->vsapi->getStride(srcC, 1);
+	const int nPitchDst = env->vsapi->getStride(dst, 0);
+	const int nRowSizeDst = width; // Shall DIVIDE BY SIZEOF(T) if not 8bit
+	const int nPitchDstU = env->vsapi->getStride(dst, 1);
+	const int nRowSizeDstU = width >> vi->format->subSamplingW;
 
 	for (y = 0; y < height; y += 2) {
 		pT = env->SYP(srcR, y - 1);
@@ -420,10 +419,8 @@ void IT::MakeMotionMap2Max_YV12(IScriptEnvironment*env, int n)
 	const VSFrameRef* srcC = env->GetFrame(n);
 	const VSFrameRef* srcN = env->GetFrame(n + 1);
 
-	//	for(int y = 0; y < height; y += 2) {
 	for (int y = 0; y < height; y++) {
 		unsigned char *pD = env->m_motionMap4DIMax + y * width;
-		//		unsigned char *pDB = m_motionMap4DIMax + (y + 1) * width;
 		{
 			const unsigned char *pC = env->SYP(srcC, y);
 			const unsigned char *pP = env->SYP(srcP, y);
@@ -468,7 +465,6 @@ void IT::MakeMotionMap2Max_YV12(IScriptEnvironment*env, int n)
 					punpcklbw mm3, mm3
 					pmaxub mm5, mm3
 
-					//				pminub mm0,mm5
 					pmaxub mm0, mm5
 
 					lea esi, [esi + 4]
