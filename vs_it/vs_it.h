@@ -21,12 +21,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301, USA
 
 const int MAX_WIDTH = 8192;
 
-#ifndef _MM_SHUFFLE
-#define _MM_SHUFFLE(z, y, x, w) (z<<6) | (y<<4) | (x<<2) | w
-#endif
-
-#define USE_MMX2  _asm { emms } _asm { sfence }
-
 class IT {
 	int m_iPThreshold;
 	int m_iThreshold;

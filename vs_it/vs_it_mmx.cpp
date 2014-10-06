@@ -20,6 +20,30 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301, USA
 
 #include "vs_it.h"
 
+#if !defined(_WIN64)
+#define rax	eax
+#define rbx	ebx
+#define rcx	ecx
+#define rdx	edx
+#define rsi	esi
+#define rdi	edi
+#define rbp	ebp
+#else
+#define rax	rax
+#define rbx	rbx
+#define rcx	rcx
+#define rdx	rdx
+#define rsi	rsi
+#define rdi	rdi
+#define rbp	rbp
+#endif
+
+#ifndef _MM_SHUFFLE
+#define _MM_SHUFFLE(z, y, x, w) (z<<6) | (y<<4) | (x<<2) | w
+#endif
+
+#define USE_MMX2  _asm { emms } _asm { sfence }
+
 #define EVAL_IV_ASM_INIT(C, T, B) \
 	__asm mov rax, C \
 	__asm mov rbx, T \

@@ -40,23 +40,5 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301, USA
 
 #define IT_VERSION "0103." "1.0"
 
-#if !defined(_WIN64)
-#define rax	eax
-#define rbx	ebx
-#define rcx	ecx
-#define rdx	edx
-#define rsi	esi
-#define rdi	edi
-#define rbp	ebp
-#else
-#define rax	rax
-#define rbx	rbx
-#define rcx	rcx
-#define rdx	rdx
-#define rsi	rsi
-#define rdi	rdi
-#define rbp	rbp
-#endif
-
 #include "IScriptEnvironment.h"
 #include "vs_it.h"
