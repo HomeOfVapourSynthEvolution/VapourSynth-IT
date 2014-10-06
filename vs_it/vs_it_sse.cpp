@@ -50,10 +50,10 @@ __forceinline __m128i eval_iv_asm(
 	unsigned const char * eax,
 	unsigned const char * ebx,
 	unsigned const char * ecx,
-	int i, int step) {
-	auto mma = _mm_load_si128(reinterpret_cast<const __m128i*>(eax + i * step));
-	auto mmb = _mm_load_si128(reinterpret_cast<const __m128i*>(ebx + i * step));
-	auto mmc = _mm_load_si128(reinterpret_cast<const __m128i*>(ecx + i * step));
+	int i) {
+	auto mma = _mm_load_si128(reinterpret_cast<const __m128i*>(eax + i));
+	auto mmb = _mm_load_si128(reinterpret_cast<const __m128i*>(ebx + i));
+	auto mmc = _mm_load_si128(reinterpret_cast<const __m128i*>(ecx + i));
 	auto mmab = _mm_subs_abs_epu8(mma, mmb);
 	auto mmac = _mm_subs_abs_epu8(mma, mmc);
 	auto mmbc = _mm_avg_epu8(mmb, mmc);
@@ -102,16 +102,16 @@ void IT::SSE_EvalIV_YV12(IScriptEnvironment * env, int n, const VSFrameRef * ref
 		for (int i = 16; i < widthminus16; i += 16) { // unrolling to twice a time, low/high
 			//EVAL_IV_ASM_INIT(pC, pT, pB)
 			//EVAL_IV_ASM(mm0, 2)
-			auto yl = eval_iv_asm(pC, pT, pB, i, 2);
-			auto yh = eval_iv_asm(pC, pT, pB, i + 8, 2);
+			auto yl = eval_iv_asm(pC, pT, pB, i * 2);
+			auto yh = eval_iv_asm(pC, pT, pB, i * 2 + 16);
 
 			//EVAL_IV_ASM_INIT(pC_U, pT_U, pB_U)
 			//EVAL_IV_ASM(mm5, 1)
-			auto u = eval_iv_asm(pC_U, pT_U, pB_U, i, 1);
+			auto u = eval_iv_asm(pC_U, pT_U, pB_U, i);
 
 			//EVAL_IV_ASM_INIT(pC_V, pT_V, pB_V)
 			//EVAL_IV_ASM(mm6, 1)
-			auto v = eval_iv_asm(pC_V, pT_V, pB_V, i, 1);
+			auto v = eval_iv_asm(pC_V, pT_V, pB_V, i);
 
 			auto uv = _mm_max_epu8(u, v);
 			//pmaxub mm5, mm6
@@ -401,3 +401,103 @@ void IT::SSE_MakeMotionMap_YV12(IScriptEnvironment * env, int n, bool flag) {
 	env->FreeFrame(srcC);
 	env->FreeFrame(srcP);
 }
+
+__forceinline __m128i make_motion_map2_asm(
+	const unsigned char* eax,
+	const unsigned char* ebx,
+	int i) {
+	auto mma = _mm_load_si128(reinterpret_cast<const __m128i*>(eax + i));
+	auto mmb = _mm_load_si128(reinterpret_cast<const __m128i*>(ebx + i));
+	return _mm_subs_abs_epu8(mma, mmb);
+}
+
+void IT::SSE_MakeMotionMap2Max_YV12(IScriptEnvironment*env, int n)
+{
+	const int twidth = width >> 1;
+
+	const VSFrameRef* srcP = env->GetFrame(n - 1);
+	const VSFrameRef* srcC = env->GetFrame(n);
+	const VSFrameRef* srcN = env->GetFrame(n + 1);
+
+	for (int y = 0; y < height; y++) {
+		unsigned char *pD = env->m_motionMap4DIMax + y * width;
+		const unsigned char *pC = env->SYP(srcC, y);
+		const unsigned char *pP = env->SYP(srcP, y);
+		const unsigned char *pN = env->SYP(srcN, y);
+		const unsigned char *pC_U = env->SYP(srcC, y, 1);
+		const unsigned char *pP_U = env->SYP(srcP, y, 1);
+		const unsigned char *pN_U = env->SYP(srcN, y, 1);
+		const unsigned char *pC_V = env->SYP(srcC, y, 2);
+		const unsigned char *pP_V = env->SYP(srcP, y, 2);
+		const unsigned char *pN_V = env->SYP(srcN, y, 2);
+
+		//_asm {
+		//mov rdi, pD
+		//xor esi, esi
+		//align 16
+		//loopA:
+		for (int i = 0; i < twidth; i += 16) { // unrolling to twice a time, low/high
+			///P
+			auto yl = make_motion_map2_asm(pC, pP, i * 2);
+			auto yh = make_motion_map2_asm(pC, pP, i * 2 + 16);
+			//MAKE_MOTION_MAP2_ASM_INIT(pC, pP)
+			//MAKE_MOTION_MAP2_ASM(mm0, 2)
+
+			auto u = make_motion_map2_asm(pC_U, pP_U, i);
+			//MAKE_MOTION_MAP2_ASM_INIT(pC_U, pP_U)
+			//MAKE_MOTION_MAP2_ASM(mm3, 1)
+
+			auto v = make_motion_map2_asm(pC_V, pP_V, i);
+			//MAKE_MOTION_MAP2_ASM_INIT(pC_V, pP_V)
+			//MAKE_MOTION_MAP2_ASM(mm4, 1)
+
+			auto uv = _mm_max_epu8(u, v);
+			//pmaxub mm3, mm4
+			auto uvl = _mm_unpacklo_epi8(uv, uv);
+			auto uvh = _mm_unpackhi_epi8(uv, uv);
+			//punpcklbw mm3, mm3
+			auto pl = _mm_max_epu8(uvl, yl);
+			auto ph = _mm_max_epu8(uvh, yh);
+			//pmaxub mm0, mm3
+
+			///N
+			yl = make_motion_map2_asm(pC, pN, i * 2);
+			yh = make_motion_map2_asm(pC, pN, i * 2 + 16);
+			//MAKE_MOTION_MAP2_ASM_INIT(pC, pN)
+			//MAKE_MOTION_MAP2_ASM(mm5, 2)
+
+			u = make_motion_map2_asm(pC_U, pN_U, i);
+			//MAKE_MOTION_MAP2_ASM_INIT(pC_U, pN_U)
+			//MAKE_MOTION_MAP2_ASM(mm3, 1)
+
+			v = make_motion_map2_asm(pC_V, pN_V, i);
+			//MAKE_MOTION_MAP2_ASM_INIT(pC_V, pN_V)
+			//MAKE_MOTION_MAP2_ASM(mm4, 1)
+
+			uv = _mm_max_epu8(u, v);
+			//pmaxub mm3, mm4
+			uvl = _mm_unpacklo_epi8(uv, uv);
+			uvh = _mm_unpackhi_epi8(uv, uv);
+			//punpcklbw mm3, mm3
+			auto nl = _mm_max_epu8(uvl, yl);
+			auto nh = _mm_max_epu8(uvh, yh);
+			//pmaxub mm5, mm3
+
+			auto mm0l = _mm_max_epu8(pl, nl);
+			auto mm0h = _mm_max_epu8(ph, nh);
+			//pmaxub mm0, mm5
+
+			//lea esi, [esi + 4]
+			//cmp esi, twidth
+			_mm_stream_si128(reinterpret_cast<__m128i*>(pD + i * 2), mm0l);
+			_mm_stream_si128(reinterpret_cast<__m128i*>(pD + i * 2 + 16), mm0h);
+			//movntq[rdi + rsi * 2 - 8], mm0
+			//jl loopA
+		}
+	}
+	// USE_MMX2;
+	env->FreeFrame(srcC);
+	env->FreeFrame(srcP);
+	env->FreeFrame(srcN);
+}
+

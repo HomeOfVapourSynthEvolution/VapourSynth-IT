@@ -243,8 +243,13 @@ void IT::DeintOneField_YV12(IScriptEnvironment * env, VSFrameRef * dst, int n) {
 	unsigned char * pDB_U;
 	unsigned char * pDB_V;
 
+#ifdef __SSE
+	MakeSimpleBlurMap_YV12(env, env->m_iCurrentFrame);
+	SSE_MakeMotionMap2Max_YV12(env, env->m_iCurrentFrame);
+#else
 	MakeSimpleBlurMap_YV12(env, env->m_iCurrentFrame);
 	MakeMotionMap2Max_YV12(env, env->m_iCurrentFrame);
+#endif
 
 	unsigned char * pFieldMap;
 	pFieldMap = new unsigned char[width * height];

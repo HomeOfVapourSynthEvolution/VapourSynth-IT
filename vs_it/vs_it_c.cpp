@@ -217,3 +217,61 @@ void IT::C_MakeMotionMap_YV12(IScriptEnvironment * env, int n, bool flag) {
 	env->FreeFrame(srcC);
 	env->FreeFrame(srcP);
 }
+
+__forceinline unsigned char make_motion_map2_asm(
+	const unsigned char* eax,
+	const unsigned char* ebx,
+	int i) {
+	auto a = eax[i];
+	auto b = ebx[i];
+	return a > b ? a - b : b - a;
+}
+
+void IT::C_MakeMotionMap2Max_YV12(IScriptEnvironment*env, int n)
+{
+	const int twidth = width >> 1;
+
+	const VSFrameRef* srcP = env->GetFrame(n - 1);
+	const VSFrameRef* srcC = env->GetFrame(n);
+	const VSFrameRef* srcN = env->GetFrame(n + 1);
+
+	for (int y = 0; y < height; y++) {
+		unsigned char *pD = env->m_motionMap4DIMax + y * width;
+		const unsigned char *pC = env->SYP(srcC, y);
+		const unsigned char *pP = env->SYP(srcP, y);
+		const unsigned char *pN = env->SYP(srcN, y);
+		const unsigned char *pC_U = env->SYP(srcC, y, 1);
+		const unsigned char *pP_U = env->SYP(srcP, y, 1);
+		const unsigned char *pN_U = env->SYP(srcN, y, 1);
+		const unsigned char *pC_V = env->SYP(srcC, y, 2);
+		const unsigned char *pP_V = env->SYP(srcP, y, 2);
+		const unsigned char *pN_V = env->SYP(srcN, y, 2);
+
+		for (int i = 0; i < twidth; i++) {
+			///P
+			auto yl = make_motion_map2_asm(pC, pP, i * 2);
+			auto yh = make_motion_map2_asm(pC, pP, i * 2 + 1);
+			auto u = make_motion_map2_asm(pC_U, pP_U, i);
+			auto v = make_motion_map2_asm(pC_V, pP_V, i);
+			auto uv = VSMAX(u, v);
+			auto pl = VSMAX(uv, yl);
+			auto ph = VSMAX(uv, yh);
+
+			///N
+			yl = make_motion_map2_asm(pC, pN, i * 2);
+			yh = make_motion_map2_asm(pC, pN, i * 2 + 1);
+			u = make_motion_map2_asm(pC_U, pN_U, i);
+			v = make_motion_map2_asm(pC_V, pN_V, i);
+			uv = VSMAX(u, v);
+			auto nl = VSMAX(uv, yl);
+			auto nh = VSMAX(uv, yh);
+
+			pD[i * 2] = VSMAX(pl, nl);
+			pD[i * 2 + 1] = VSMAX(ph, nh);
+		}
+	}
+	env->FreeFrame(srcC);
+	env->FreeFrame(srcP);
+	env->FreeFrame(srcN);
+}
+

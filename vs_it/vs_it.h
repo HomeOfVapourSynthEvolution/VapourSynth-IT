@@ -87,6 +87,9 @@ public:
 	void VS_CC C_MakeMotionMap_YV12(IScriptEnvironment* env, int n, bool flag);
 
 	void VS_CC MakeMotionMap2Max_YV12(IScriptEnvironment* env, int fno);
+	void VS_CC SSE_MakeMotionMap2Max_YV12(IScriptEnvironment* env, int fno);
+	void VS_CC C_MakeMotionMap2Max_YV12(IScriptEnvironment* env, int fno);
+
     void VS_CC MakeSimpleBlurMap_YV12(IScriptEnvironment* env, int fno);
     void VS_CC CopyCPNField(IScriptEnvironment* env, VSFrameRef * dst, int n);
     void VS_CC DeintOneField_YV12(IScriptEnvironment* env, VSFrameRef * dst, int n);
