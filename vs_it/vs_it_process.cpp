@@ -19,49 +19,47 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301, USA
 #include "vs_it.h"
 #include "vs_it_interface.h"
 
-void IT::SetFT(IScriptEnvironment*env, int base, int n, char c)
-{
+void IT::SetFT(IScriptEnvironment * env, int base, int n, char c) {
 	env->m_frameInfo[clipFrame(base + n)].mflag = c;
 	env->m_blockInfo[base / 5].cfi = n;
 	env->m_blockInfo[base / 5].level = '0';
 }
 
-void IT::ChooseBest(IScriptEnvironment* env, int n)
-{
-	const VSFrameRef* srcC = env->GetFrame(clipFrame(n));
+void IT::ChooseBest(IScriptEnvironment * env, int n) {
+	const VSFrameRef * srcC = env->GetFrame(clipFrame(n));
+	const VSFrameRef * srcP = env->GetFrame(clipFrame(n - 1));
 	//	MakeMotionMap(m_iCurrentFrame - 1, false);
 #ifdef __SSE
 	SSE_MakeMotionMap_YV12(env, env->m_iCurrentFrame, false);
 	SSE_MakeMotionMap_YV12(env, env->m_iCurrentFrame + 1, false);
 	SSE_MakeDEmap_YV12(env, srcC, 0);
+	SSE_EvalIV_YV12(env, n, srcC, env->m_iSumC, env->m_iSumPC);
+	SSE_EvalIV_YV12(env, n, srcP, env->m_iSumP, env->m_iSumPP);
 #else
 	MakeMotionMap_YV12(env, env->m_iCurrentFrame, false);
 	MakeMotionMap_YV12(env, env->m_iCurrentFrame + 1, false);
 	MakeDEmap_YV12(env, srcC, 0);
-#endif
 	EvalIV_YV12(env, n, srcC, env->m_iSumC, env->m_iSumPC);
-	const VSFrameRef* srcP = env->GetFrame(clipFrame(n - 1));
 	EvalIV_YV12(env, n, srcP, env->m_iSumP, env->m_iSumPP);
+#endif
 	CompCP(env);
 	env->FreeFrame(srcC);
 	env->FreeFrame(srcP);
 }
 
-void IT::Decide(IScriptEnvironment*env, int n)
-{
+void IT::Decide(IScriptEnvironment * env, int n) {
 	if (env->m_blockInfo[n / 5].level != 'U')
 		return;
 
 	int base = (n / 5) * 5;
 	int i;
-    int min0 = env->m_frameInfo[clipFrame(base)].diffP0;
+	int min0 = env->m_frameInfo[clipFrame(base)].diffP0;
 	for (i = 1; i < 5; ++i) {
-        min0 = VSMIN(min0, env->m_frameInfo[clipFrame(base + i)].diffP0);
+		min0 = VSMIN(min0, env->m_frameInfo[clipFrame(base + i)].diffP0);
 	}
 	int mmin = AdjPara(50);
 
-	for (i = 0; i < 5; ++i)
-	{
+	for (i = 0; i < 5; ++i) {
 		int m = env->m_frameInfo[clipFrame(base + i)].diffP0;
 		env->m_frameInfo[clipFrame(base + i)].mflag = m >= VSMAX(mmin, min0) * 5 ? '.' : '+';
 	}
@@ -79,10 +77,9 @@ void IT::Decide(IScriptEnvironment*env, int n)
 	if (ncf == 0) {
 		min0 = env->m_frameInfo[clipFrame(base)].diffS0;
 		for (i = 1; i < 5; ++i) {
-            min0 = VSMIN(min0, env->m_frameInfo[clipFrame(base + i)].diffS0);
+			min0 = VSMIN(min0, env->m_frameInfo[clipFrame(base + i)].diffS0);
 		}
-		for (i = 0; i < 5; ++i)
-		{
+		for (i = 0; i < 5; ++i) {
 			int m = env->m_frameInfo[clipFrame(base + i)].diffS0;
 			env->m_frameInfo[clipFrame(base + i)].mflag = m >= VSMAX(mmin2, min0) * 3 ? '.' : '+';
 		}
@@ -213,63 +210,59 @@ void IT::Decide(IScriptEnvironment*env, int n)
 	return;
 }
 
-void IT::DeintOneField_YV12(IScriptEnvironment*env, VSFrameRef* dst, int n)
-{
+void IT::DeintOneField_YV12(IScriptEnvironment * env, VSFrameRef * dst, int n) {
 	const VSFrameRef * srcC = env->GetFrame(n);
-	const VSFrameRef *srcR;
+	const VSFrameRef * srcR;
 	switch (toupper(env->m_iUseFrame)) {
-	default:
-	case 'C':
-		srcR = srcC;
-		break;
-	case 'P':
-		srcR = env->GetFrame(n - 1);
-		break;
-	case 'N':
-		srcR = env->GetFrame(n + 1);
-		break;
+		default:
+		case 'C':
+			srcR = srcC;
+			break;
+		case 'P':
+			srcR = env->GetFrame(n - 1);
+			break;
+		case 'N':
+			srcR = env->GetFrame(n + 1);
+			break;
 	}
 
 	// const unsigned char *pT;
-	const unsigned char *pC;
-	const unsigned char *pB;
-	const unsigned char *pBB;
-	const unsigned char *pC_U;
+	const unsigned char * pC;
+	const unsigned char * pB;
+	const unsigned char * pBB;
+	const unsigned char * pC_U;
 	// const unsigned char *pB_U;
-	const unsigned char *pBB_U;
-	const unsigned char *pC_V;
+	const unsigned char * pBB_U;
+	const unsigned char * pC_V;
 	// const unsigned char *pB_V;
-	const unsigned char *pBB_V;
-	unsigned char *pDC;
-	unsigned char *pDB;
-	unsigned char *pDC_U;
-	unsigned char *pDC_V;
-	unsigned char *pDB_U;
-	unsigned char *pDB_V;
+	const unsigned char * pBB_V;
+	unsigned char * pDC;
+	unsigned char * pDB;
+	unsigned char * pDC_U;
+	unsigned char * pDC_V;
+	unsigned char * pDB_U;
+	unsigned char * pDB_V;
 
 	MakeSimpleBlurMap_YV12(env, env->m_iCurrentFrame);
 	MakeMotionMap2Max_YV12(env, env->m_iCurrentFrame);
 
-	unsigned char *pFieldMap;
+	unsigned char * pFieldMap;
 	pFieldMap = new unsigned char[width * height];
-    memset(pFieldMap, 0, width * height);
+	memset(pFieldMap, 0, width * height);
 	int x, y;
-	for (y = 0; y < height; y += 1)
-	{
-		unsigned char *pFM = pFieldMap + width * clipY(y);
-		for (x = 1; x < width - 1; x++)
-		{
-			const unsigned char *pmSC = env->m_motionMap4DI + width * clipY(y);
-			const unsigned char *pmSB = env->m_motionMap4DI + width * clipY(y + 1);
-			const unsigned char *pmMC = env->m_motionMap4DIMax + width * clipY(y);
-			const unsigned char *pmMB = env->m_motionMap4DIMax + width * clipY(y + 1);
+	for (y = 0; y < height; y += 1) {
+		unsigned char * pFM = pFieldMap + width * clipY(y);
+		for (x = 1; x < width - 1; x++) {
+			const unsigned char * pmSC = env->m_motionMap4DI + width * clipY(y);
+			const unsigned char * pmSB = env->m_motionMap4DI + width * clipY(y + 1);
+			const unsigned char * pmMC = env->m_motionMap4DIMax + width * clipY(y);
+			const unsigned char * pmMB = env->m_motionMap4DIMax + width * clipY(y + 1);
 			const int nTh = 12;
 			const int nThLine = 1;
 			if (((pmSC[x - 1] > nThLine && pmSC[x] > nThLine && pmSC[x + 1] > nThLine) ||
-				(pmSB[x - 1] > nThLine && pmSB[x] > nThLine && pmSB[x + 1] > nThLine)) &&
+					(pmSB[x - 1] > nThLine && pmSB[x] > nThLine && pmSB[x + 1] > nThLine)) &&
 				((pmMC[x - 1] > nTh && pmMC[x] > nTh && pmMC[x + 1] > nTh) ||
-				(pmMB[x - 1] > nTh && pmMB[x] > nTh && pmMB[x + 1] > nTh)))
-			{
+					(pmMB[x - 1] > nTh && pmMB[x] > nTh && pmMB[x + 1] > nTh))) {
 				pFM[x - 1] = 1;
 				pFM[x] = 1;
 				pFM[x + 1] = 1;
@@ -303,26 +296,23 @@ void IT::DeintOneField_YV12(IScriptEnvironment*env, VSFrameRef* dst, int n)
 		pDC_V = env->DYP(dst, y, 2);
 		pDB_V = env->DYP(dst, y + 1, 2);
 
-        vs_bitblt(pDC, nPitchDst, pC, nPitchSrc, nRowSizeDst, 1);
-		if ((y >> 1) % 2)
-		{
-            vs_bitblt(pDC_U, nPitchDstU, pC_U, nPitchSrcU, nRowSizeDstU, 1);
-            vs_bitblt(pDC_V, nPitchDstU, pC_V, nPitchSrcU, nRowSizeDstU, 1);
+		vs_bitblt(pDC, nPitchDst, pC, nPitchSrc, nRowSizeDst, 1);
+		if ((y >> 1) % 2) {
+			vs_bitblt(pDC_U, nPitchDstU, pC_U, nPitchSrcU, nRowSizeDstU, 1);
+			vs_bitblt(pDC_V, nPitchDstU, pC_V, nPitchSrcU, nRowSizeDstU, 1);
 		}
 
-		const unsigned char *pFM = pFieldMap + width * clipY(y);
-		const unsigned char *pFMB = pFieldMap + width * clipY(y + 1);
-		for (x = 0; x < width; ++x)
-		{
+		const unsigned char * pFM = pFieldMap + width * clipY(y);
+		const unsigned char * pFMB = pFieldMap + width * clipY(y + 1);
+		for (x = 0; x < width; ++x) {
 			int x_half = x >> 1;
 			pDB[x] = pFM[x - 1] == 1 || pFM[x] == 1 || pFM[x + 1] == 1 ||
-			         (pFMB[x - 1] == 1 || pFMB[x] == 1 || pFMB[x + 1] == 1) ? 
-					 static_cast<unsigned char>((pC[x] + pBB[x] + 1) >> 1) : pB[x];
+			         (pFMB[x - 1] == 1 || pFMB[x] == 1 || pFMB[x + 1] == 1) ?
+				         static_cast<unsigned char>((pC[x] + pBB[x] + 1) >> 1) : pB[x];
 
-			if ((y >> 1) % 2)
-			{
-                pDB_U[x_half] = static_cast<unsigned char>((pC_U[x_half] + pBB_U[x_half] + 1) >> 1);
-                pDB_V[x_half] = static_cast<unsigned char>((pC_V[x_half] + pBB_V[x_half] + 1) >> 1);
+			if ((y >> 1) % 2) {
+				pDB_U[x_half] = static_cast<unsigned char>((pC_U[x_half] + pBB_U[x_half] + 1) >> 1);
+				pDB_V[x_half] = static_cast<unsigned char>((pC_V[x_half] + pBB_V[x_half] + 1) >> 1);
 			}
 		}
 	}
@@ -334,9 +324,7 @@ void IT::DeintOneField_YV12(IScriptEnvironment*env, VSFrameRef* dst, int n)
 	return;
 }
 
-
-bool IT::CompCP(IScriptEnvironment*env)
-{
+bool IT::CompCP(IScriptEnvironment * env) {
 	int n = env->m_iCurrentFrame;
 	int p0 = env->m_frameInfo[n].diffP0;
 	int p1 = env->m_frameInfo[n].diffP1;
@@ -365,13 +353,11 @@ bool IT::CompCP(IScriptEnvironment*env)
 	int thcomb = AdjPara(20);
 	if (n != 0) {
 		if ((env->m_iSumC < thcomb && env->m_iSumP < thcomb) || abs(env->m_iSumC - env->m_iSumP) * 10 < env->m_iSumC + env->m_iSumP) {
-			if (abs(env->m_iSumC - env->m_iSumP) > AdjPara(8))
-			{
+			if (abs(env->m_iSumC - env->m_iSumP) > AdjPara(8)) {
 				env->m_iUseFrame = env->m_iSumP >= env->m_iSumC ? 'c' : 'p';
 				return true;
 			}
-			if (abs(env->m_iSumPC - env->m_iSumPP) > AdjPara(10))
-			{
+			if (abs(env->m_iSumPC - env->m_iSumPP) > AdjPara(10)) {
 				env->m_iUseFrame = env->m_iSumPP >= env->m_iSumPC ? 'c' : 'p';
 				return true;
 			}
@@ -432,8 +418,7 @@ bool IT::CompCP(IScriptEnvironment*env)
 	return true;
 }
 
-bool IT::DrawPrevFrame(IScriptEnvironment*env, VSFrameRef * dst, int n)
-{
+bool IT::DrawPrevFrame(IScriptEnvironment * env, VSFrameRef * dst, int n) {
 	bool bResult = false;
 
 	int nPrevFrame = clipFrame(n - 1);
@@ -450,8 +435,7 @@ bool IT::DrawPrevFrame(IScriptEnvironment*env, VSFrameRef * dst, int n)
 	if (env->m_frameInfo[nPrevFrame].ip == 'P' && env->m_frameInfo[nNextFrame].ip == 'P')
 		bResult = CheckSceneChange(env, n);
 
-	if (bResult)
-	{
+	if (bResult) {
 		env->m_iUseFrame = env->m_frameInfo[nPrevFrame].match;
 		CopyCPNField(env, dst, nPrevFrame);
 	}
@@ -461,21 +445,20 @@ bool IT::DrawPrevFrame(IScriptEnvironment*env, VSFrameRef * dst, int n)
 	return bResult;
 }
 
-void IT::CopyCPNField(IScriptEnvironment* env, VSFrameRef * dst, int n)
-{
-	const VSFrameRef* srcC = env->GetFrame(clipFrame(n));
-	const VSFrameRef* srcR;
+void IT::CopyCPNField(IScriptEnvironment * env, VSFrameRef * dst, int n) {
+	const VSFrameRef * srcC = env->GetFrame(clipFrame(n));
+	const VSFrameRef * srcR;
 	switch (toupper(env->m_iUseFrame)) {
-	default:
-	case 'C':
-		srcR = srcC;
-		break;
-	case 'P':
-		srcR = env->GetFrame(clipFrame(n - 1));
-		break;
-	case 'N':
-		srcR = env->GetFrame(clipFrame(n + 1));
-		break;
+		default:
+		case 'C':
+			srcR = srcC;
+			break;
+		case 'P':
+			srcR = env->GetFrame(clipFrame(n - 1));
+			break;
+		case 'N':
+			srcR = env->GetFrame(clipFrame(n + 1));
+			break;
 	}
 
 	int nPitch = env->vsapi->getStride(dst, 0);
@@ -490,8 +473,7 @@ void IT::CopyCPNField(IScriptEnvironment* env, VSFrameRef * dst, int n)
 		vs_bitblt(env->DYP(dst, yo), nPitch, env->SYP(srcC, yo), nPitch, nRowSize, 1);
 		vs_bitblt(env->DYP(dst, y), nPitch, env->SYP(srcR, y), nPitch, nRowSize, 1);
 
-		if ((yy >> 1) % 2)
-		{
+		if ((yy >> 1) % 2) {
 			vs_bitblt(env->DYP(dst, yo, 1), nPitchU, env->SYP(srcC, yo, 1), nPitchU, nRowSizeU, 1);
 			vs_bitblt(env->DYP(dst, y, 1), nPitchU, env->SYP(srcR, y, 1), nPitchU, nRowSizeU, 1);
 			vs_bitblt(env->DYP(dst, yo, 2), nPitchU, env->SYP(srcC, yo, 2), nPitchU, nRowSizeU, 1);
@@ -504,10 +486,9 @@ void IT::CopyCPNField(IScriptEnvironment* env, VSFrameRef * dst, int n)
 	env->FreeFrame(srcC);
 }
 
-bool IT::CheckSceneChange(IScriptEnvironment*env, int n)
-{
-	const VSFrameRef* srcP = env->GetFrame(clipFrame(n - 1));
-	const VSFrameRef* srcC = env->GetFrame(clipFrame(n));
+bool IT::CheckSceneChange(IScriptEnvironment * env, int n) {
+	const VSFrameRef * srcP = env->GetFrame(clipFrame(n - 1));
+	const VSFrameRef * srcC = env->GetFrame(clipFrame(n));
 
 	int rowSize = env->vsapi->getStride(srcC, 0);
 
@@ -516,13 +497,11 @@ bool IT::CheckSceneChange(IScriptEnvironment*env, int n)
 
 	int startY = 1;
 
-	for (y = startY; y < height; y += 2)
-	{
-		const unsigned char *pC = env->SYP(srcC, y);
-		const unsigned char *pP = env->SYP(srcP, y);
+	for (y = startY; y < height; y += 2) {
+		const unsigned char * pC = env->SYP(srcC, y);
+		const unsigned char * pP = env->SYP(srcP, y);
 
-		for (x = 0; x < rowSize; x++)
-		{
+		for (x = 0; x < rowSize; x++) {
 			int a = abs(pC[x] - pP[x]);
 			if (a > 50) sum3 += 1;
 		}

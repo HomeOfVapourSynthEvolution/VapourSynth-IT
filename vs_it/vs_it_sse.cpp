@@ -18,85 +18,240 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301, USA
 
 #include "vs_it.h"
 
+auto mmask1 = _mm_set1_epi8(1);
+auto zero = _mm_setzero_si128();
+
+__forceinline __m128i _mm_subs_abs_epu8(__m128i a, __m128i b) {
+	// subs+subs+or seems to be faster than sub+abs
+	auto delta1 = _mm_subs_epu8(a, b);
+	auto delta2 = _mm_subs_epu8(b, a);
+	return _mm_or_si128(delta1, delta2);
+}
+
+__forceinline int _mm_sum_epu8(__m128i source) {
+	auto dest = _mm_sad_epu8(source, zero);
+	dest = _mm_hadd_epi32(dest, zero);
+	dest = _mm_hadd_epi32(dest, zero);
+	return _mm_cvtsi128_si32(dest);
+}
+
+__forceinline __m128i _mm_cmpge_cnt_epu8(__m128i source, __m128i threshold) {
+	auto dest = _mm_subs_epu8(source, threshold);
+	//psubusb mm0, th
+	dest = _mm_cmpeq_epi8(dest, zero);
+	//pcmpeqb mm0, mm7
+	dest = _mm_cmpeq_epi8(dest, zero);
+	//pcmpeqb mm0, mm7
+	dest = _mm_and_si128(dest, mmask1);
+	return dest;
+}
+
+__forceinline __m128i eval_iv_asm(
+	unsigned const char * eax,
+	unsigned const char * ebx,
+	unsigned const char * ecx,
+	int i, int step) {
+	auto mma = _mm_load_si128(reinterpret_cast<const __m128i*>(eax + i * step));
+	auto mmb = _mm_load_si128(reinterpret_cast<const __m128i*>(ebx + i * step));
+	auto mmc = _mm_load_si128(reinterpret_cast<const __m128i*>(ecx + i * step));
+	auto mmab = _mm_subs_abs_epu8(mma, mmb);
+	auto mmac = _mm_subs_abs_epu8(mma, mmc);
+	auto mmbc = _mm_avg_epu8(mmb, mmc);
+	auto mm_a_bc = _mm_subs_abs_epu8(mma, mmbc);
+	auto mm_min_ab_ac = _mm_min_epu8(mmab, mmac);
+	return _mm_min_epu8(mm_a_bc, mm_min_ab_ac);
+
+}
+
+void IT::SSE_EvalIV_YV12(IScriptEnvironment * env, int n, const VSFrameRef * ref, long & counter, long & counterp) {
+	const VSFrameRef * srcC = env->GetFrame(clipFrame(n));
+
+	auto mth = _mm_set1_epi8(40);
+	auto mth2 = _mm_set1_epi8(6);
+
+	SSE_MakeDEmap_YV12(env, ref, 1);
+
+	const int widthminus16 = (width - 16) >> 1;
+	int sum = 0, sum2 = 0;
+	for (int yy = 16; yy < height - 16; yy += 2) {
+		int y;
+		y = yy + 1;
+		const unsigned char * pT = env->SYP(srcC, y - 1);
+		const unsigned char * pC = env->SYP(ref, y);
+		const unsigned char * pB = env->SYP(srcC, y + 1);
+		const unsigned char * pT_U = env->SYP(srcC, y - 1, 1);
+		const unsigned char * pC_U = env->SYP(ref, y, 1);
+		const unsigned char * pB_U = env->SYP(srcC, y + 1, 1);
+		const unsigned char * pT_V = env->SYP(srcC, y - 1, 2);
+		const unsigned char * pC_V = env->SYP(ref, y, 2);
+		const unsigned char * pB_V = env->SYP(srcC, y + 1, 2);
+
+		const unsigned char * peT = &env->m_edgeMap[clipY(y - 1) * width];
+		const unsigned char * peC = &env->m_edgeMap[clipY(y) * width];
+		const unsigned char * peB = &env->m_edgeMap[clipY(y + 1) * width];
+
+		//pxor mm7, mm7
+		//mov esi, 16
+		//movq rsum, mm7
+		//movq psum, mm7
+		//movq psum0, mm7
+		//movq psum1, mm7
+		//align 16
+		//loopB:
+		auto mrsum = zero, mpsum = zero;
+		for (int i = 16; i < widthminus16; i += 16) { // unrolling to twice a time, low/high
+			//EVAL_IV_ASM_INIT(pC, pT, pB)
+			//EVAL_IV_ASM(mm0, 2)
+			auto yl = eval_iv_asm(pC, pT, pB, i, 2);
+			auto yh = eval_iv_asm(pC, pT, pB, i + 8, 2);
+
+			//EVAL_IV_ASM_INIT(pC_U, pT_U, pB_U)
+			//EVAL_IV_ASM(mm5, 1)
+			auto u = eval_iv_asm(pC_U, pT_U, pB_U, i, 1);
+
+			//EVAL_IV_ASM_INIT(pC_V, pT_V, pB_V)
+			//EVAL_IV_ASM(mm6, 1)
+			auto v = eval_iv_asm(pC_V, pT_V, pB_V, i, 1);
+
+			auto uv = _mm_max_epu8(u, v);
+			//pmaxub mm5, mm6
+			auto uvl = _mm_unpacklo_epi8(uv, uv);
+			auto uvh = _mm_unpackhi_epi8(uv, uv);
+			//punpcklbw mm5, mm5
+			auto mm0l = _mm_max_epu8(yl, uvl);
+			auto mm0h = _mm_max_epu8(yh, uvh);
+			//pmaxub mm0, mm5; mm0 <-max(y, max(u, v))
+
+			auto peCl = _mm_load_si128(reinterpret_cast<const __m128i*>(peC + i * 2));
+			auto peCh = _mm_load_si128(reinterpret_cast<const __m128i*>(peC + i * 2 + 16));
+			auto peTl = _mm_load_si128(reinterpret_cast<const __m128i*>(peT + i * 2));
+			auto peTh = _mm_load_si128(reinterpret_cast<const __m128i*>(peT + i * 2 + 16));
+			auto peBl = _mm_load_si128(reinterpret_cast<const __m128i*>(peB + i * 2));
+			auto peBh = _mm_load_si128(reinterpret_cast<const __m128i*>(peB + i * 2 + 16));
+			//mov rdx, peC
+			//movq mm3, [rdx + rsi * 2]
+			//mov rdx, peT
+			auto pel = _mm_max_epu8(peTl, peBl);
+			auto peh = _mm_max_epu8(peTh, peBh);
+			//pmaxub mm3, [rdx + rsi * 2]
+			//mov rdx, peB
+			pel = _mm_max_epu8(pel, peCl);
+			peh = _mm_max_epu8(peh, peCh);
+			//pmaxub mm3, [rdx + rsi * 2]; mm3 <-max(peC[x], max(peT[x], peB[x]))
+
+			mm0l = _mm_subs_epu8(mm0l, pel);
+			mm0h = _mm_subs_epu8(mm0h, peh);
+			//psubusb mm0, mm3
+			mm0l = _mm_subs_epu8(mm0l, pel);
+			mm0h = _mm_subs_epu8(mm0h, peh);
+			//psubusb mm0, mm3
+			//movq mm1, mm0
+
+			auto mth_l = _mm_cmpge_cnt_epu8(mm0l, mth);
+			auto mth_h = _mm_cmpge_cnt_epu8(mm0h, mth);
+			mrsum = _mm_adds_epu8(mrsum, mth_l);
+			mrsum = _mm_adds_epu8(mrsum, mth_h);
+			//paddusb mm0, rsum; if (max - maxpe * 2 > 40) sum++
+
+			auto mth2_l = _mm_cmpge_cnt_epu8(mm0l, mth2);
+			auto mth2_h = _mm_cmpge_cnt_epu8(mm0h, mth2);
+			mpsum = _mm_adds_epu8(mpsum, mth2_l);
+			mpsum = _mm_adds_epu8(mpsum, mth2_h);
+			//paddusb mm1, psum; if (max - maxpe * 2 > 6) sum2++
+
+			//lea esi, [esi + 4]
+			//cmp esi, widthminus16
+			//jl loopB
+		}
+
+		sum += _mm_sum_epu8(mrsum);
+		sum2 += _mm_sum_epu8(mpsum);
+
+		if (sum > m_iPThreshold) {
+			sum = m_iPThreshold;
+			break;
+		}
+	}
+	counter = sum;
+	counterp = sum2;
+
+	env->FreeFrame(srcC);
+	return;
+}
+
 __forceinline __m128i make_de_map_asm(
-	unsigned const char* eax,
-	unsigned const char* ebx,
-	unsigned const char* ecx,
+	unsigned const char * eax,
+	unsigned const char * ebx,
+	unsigned const char * ecx,
 	int i, int step, int offset) {
 	auto mma = _mm_load_si128(reinterpret_cast<const __m128i*>(eax + i * step + offset));
 	auto mmb = _mm_load_si128(reinterpret_cast<const __m128i*>(ebx + i * step + offset));
 	auto mmc = _mm_load_si128(reinterpret_cast<const __m128i*>(ecx + i * step + offset));
 	auto mmbc = _mm_avg_epu8(mmb, mmc);
-	// subs+subs+or seems to be faster than sub+abs
-	auto mmabc = _mm_subs_epu8(mma, mmbc);
-	auto mmbca = _mm_subs_epu8(mmbc, mma);
-	return _mm_or_si128(mmabc, mmbca);
+
+	return _mm_subs_abs_epu8(mma, mmbc);
 }
 
-void IT::SSE_MakeDEmap_YV12(IScriptEnvironment*env, const VSFrameRef * ref, int offset)
-{
+void IT::SSE_MakeDEmap_YV12(IScriptEnvironment * env, const VSFrameRef * ref, int offset) {
 	const int twidth = width >> 1;
 
 	for (int yy = 0; yy < height; yy += 2) {
 		int y = yy + offset;
-		const unsigned char *pTT = env->SYP(ref, y - 2);
-		const unsigned char *pC = env->SYP(ref, y);
-		const unsigned char *pBB = env->SYP(ref, y + 2);
-		const unsigned char *pTT_U = env->SYP(ref, y - 2, 1);
-		const unsigned char *pC_U = env->SYP(ref, y, 1);
-		const unsigned char *pBB_U = env->SYP(ref, y + 2, 1);
-		const unsigned char *pTT_V = env->SYP(ref, y - 2, 2);
-		const unsigned char *pC_V = env->SYP(ref, y, 2);
-		const unsigned char *pBB_V = env->SYP(ref, y + 2, 2);
-		unsigned char *pED = env->m_edgeMap + y * width;
+		const unsigned char * pTT = env->SYP(ref, y - 2);
+		const unsigned char * pC = env->SYP(ref, y);
+		const unsigned char * pBB = env->SYP(ref, y + 2);
+		const unsigned char * pTT_U = env->SYP(ref, y - 2, 1);
+		const unsigned char * pC_U = env->SYP(ref, y, 1);
+		const unsigned char * pBB_U = env->SYP(ref, y + 2, 1);
+		const unsigned char * pTT_V = env->SYP(ref, y - 2, 2);
+		const unsigned char * pC_V = env->SYP(ref, y, 2);
+		const unsigned char * pBB_V = env->SYP(ref, y + 2, 2);
+		unsigned char * pED = env->m_edgeMap + y * width;
 
-		__m128i mm0, mm1, mm2, mm3, mm5;
 		//		mov rdi, pED
 		//		xor esi, esi
 		//		align 16
 		//	loopA:
-		for (int i = 0; i < twidth; i += 16)
-		{
+		for (int i = 0; i < twidth; i += 16) {
 			// MAKE_DE_MAP_ASM_INIT(pC, pTT, pBB);
-			mm0 = make_de_map_asm(pC, pTT, pBB, i, 2, 0);
+			auto yl = make_de_map_asm(pC, pTT, pBB, i, 2, 0);
 			// MAKE_DE_MAP_ASM(mm0, 2, 0);
-			mm3 = make_de_map_asm(pC, pTT, pBB, i, 2, 16);
+			auto yh = make_de_map_asm(pC, pTT, pBB, i, 2, 16);
 			// MAKE_DE_MAP_ASM(mm3, 2, 8);
 			// MAKE_DE_MAP_ASM_INIT(pC_U, pTT_U, pBB_U);
-			mm1 = make_de_map_asm(pC_U, pTT_U, pBB_U, i, 1, 0);
+			auto u = make_de_map_asm(pC_U, pTT_U, pBB_U, i, 1, 0);
 			// MAKE_DE_MAP_ASM(mm1, 1, 0);
 			// MAKE_DE_MAP_ASM(mm4, 1, 4);
 			// MAKE_DE_MAP_ASM_INIT(pC_V, pTT_V, pBB_V);
-			mm2 = make_de_map_asm(pC_V, pTT_V, pBB_V, i, 1, 0);
+			auto v = make_de_map_asm(pC_V, pTT_V, pBB_V, i, 1, 0);
 			// MAKE_DE_MAP_ASM(mm2, 1, 0);
 			// MAKE_DE_MAP_ASM(mm5, 1, 4);
 
-			mm5 = mm2 = _mm_max_epu8(mm2, mm1);
+			auto uv = _mm_max_epu8(v, u);
 			//	pmaxub mm2, mm1
 			// mm5 = _mm_max_epu8(mm5, mm4);
 			//	pmaxub mm5, mm4
-			mm2 = _mm_unpacklo_epi8(mm2, mm2);
+			auto uvl = _mm_unpacklo_epi8(uv, uv);
 			//	punpcklbw mm2, mm2
-			mm5 = _mm_unpackhi_epi8(mm5, mm5);
+			auto uvh = _mm_unpackhi_epi8(uv, uv);
 			//	punpcklbw mm5, mm5
-			mm0 = _mm_max_epu8(mm0, mm2);
+			yl = _mm_max_epu8(yl, uvl);
 			//	pmaxub mm0, mm2
-			mm3 = _mm_max_epu8(mm3, mm5);
+			yh = _mm_max_epu8(yh, uvh);
 			//	pmaxub mm3, mm5
 
 			//	lea esi, [esi + 8]
-			_mm_stream_si128(reinterpret_cast<__m128i*>(pED + i * 2), mm0);
+			_mm_stream_si128(reinterpret_cast<__m128i*>(pED + i * 2), yl);
 			//	movntq[rdi + rsi * 2 - 16], mm0
 			//	cmp esi, twidth
-			_mm_stream_si128(reinterpret_cast<__m128i*>(pED + i * 2 + 16), mm3);
+			_mm_stream_si128(reinterpret_cast<__m128i*>(pED + i * 2 + 16), yh);
 			//	movntq[rdi + rsi * 2 - 8], mm3
 			//	jl loopA
 		}
 	}
 }
 
-void IT::SSE_MakeMotionMap_YV12(IScriptEnvironment*env, int n, bool flag)
-{
+void IT::SSE_MakeMotionMap_YV12(IScriptEnvironment * env, int n, bool flag) {
 	n = clipFrame(n);
 	if (flag == false && env->m_frameInfo[n].diffP0 >= 0)
 		return;
@@ -110,18 +265,17 @@ void IT::SSE_MakeMotionMap_YV12(IScriptEnvironment*env, int n, bool flag)
 	auto mmbTh2 = _mm_set1_epi8(18);
 	auto mmask1 = _mm_set1_epi8(1);
 
-	const VSFrameRef* srcP = env->GetFrame(clipFrame(n - 1));
-	const VSFrameRef* srcC = env->GetFrame(n);
+	const VSFrameRef * srcP = env->GetFrame(clipFrame(n - 1));
+	const VSFrameRef * srcC = env->GetFrame(n);
 	ALIGNED_ARRAY(short bufP0[MAX_WIDTH], 16);
 	ALIGNED_ARRAY(unsigned char bufP1[MAX_WIDTH], 16);
 	int pe0 = 0, po0 = 0, pe1 = 0, po1 = 0;
 	for (int yy = 16; yy < height - 16; ++yy) {
 		int y = yy;
-		const unsigned char *pC = env->SYP(srcC, y);
-		const unsigned char *pP = env->SYP(srcP, y);
+		const unsigned char * pC = env->SYP(srcC, y);
+		const unsigned char * pP = env->SYP(srcP, y);
 
-		__m128i c, p, cx, px, zero;
-		zero = _mm_setzero_si128();
+		__m128i c, p, cx, px;
 		for (i = 0; i < twidth; i += 16) {
 			_mm_prefetch(reinterpret_cast<const char*>(pC + i + 64), _MM_HINT_NTA);
 			_mm_prefetch(reinterpret_cast<const char*>(pP + i + 64), _MM_HINT_NTA);
@@ -223,18 +377,12 @@ void IT::SSE_MakeMotionMap_YV12(IScriptEnvironment*env, int n, bool flag)
 			//jl loopC
 		}
 
-		msum = _mm_sad_epu8(msum, zero);
-		msum = _mm_hadd_epi32(msum, zero);
-		msum = _mm_hadd_epi32(msum, zero);
 		//psadbw mm4, mm7
-		int tsum = _mm_cvtsi128_si32(msum);
+		int tsum = _mm_sum_epu8(msum);
 		//movd tsum, mm4
 
-		msum1 = _mm_sad_epu8(msum1, zero);
-		msum1 = _mm_hadd_epi32(msum1, zero);
-		msum1 = _mm_hadd_epi32(msum1, zero);
 		//psadbw mm3, mm7
-		int tsum1 = _mm_cvtsi128_si32(msum1);
+		int tsum1 = _mm_sum_epu8(msum1);
 		//movd tsum1, mm3
 
 		if ((y & 1) == 0) {

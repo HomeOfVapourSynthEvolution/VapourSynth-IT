@@ -18,22 +18,16 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301, USA
 
 #include "vs_it.h"
 
-IT::IT(VSVideoInfo * vi, VSNodeRef * node, int _fps, int _threshold, int _pthreshold, const VSAPI *vsapi) :
-vi(vi),
-node(node),
-m_iFPS(_fps),
-m_iThreshold(_threshold),
-m_iPThreshold(_pthreshold)
-{
+IT::IT(VSVideoInfo * vi, VSNodeRef * node, int _fps, int _threshold, int _pthreshold, const VSAPI * vsapi) :
+	vi(vi),
+	node(node),
+	m_iFPS(_fps),
+	m_iThreshold(_threshold),
+	m_iPThreshold(_pthreshold) {
 	m_iMaxFrames = vi->numFrames;
 	m_iCounter = 0;
 	width = vi->width;
 	height = vi->height;
-
-	for (int k = 0; k < 32; ++k) {
-		m_pvf[k] = 0;
-		m_ipvfIndex[k] = -1;
-	}
 
 	m_iPThreshold = AdjPara(m_iPThreshold);
 
@@ -47,9 +41,7 @@ m_iPThreshold(_pthreshold)
 	}
 }
 
-
-void IT::GetFramePre(IScriptEnvironment* env, int n)
-{
+void IT::GetFramePre(IScriptEnvironment * env, int n) {
 	if (m_iFPS == 24) {
 		int base = n + n / 4;
 		base = (base / 5) * 5;
@@ -61,8 +53,7 @@ void IT::GetFramePre(IScriptEnvironment* env, int n)
 		env->vsapi->requestFrameFilter(n, node, env->frameCtx);
 }
 
-const VSFrameRef *IT::GetFrame(IScriptEnvironment* env, int n)
-{
+const VSFrameRef* IT::GetFrame(IScriptEnvironment * env, int n) {
 	++m_iCounter;
 	env->m_iRealFrame = n;
 	env->m_frameInfo = new CFrameInfo[m_iMaxFrames + 6];
@@ -136,8 +127,7 @@ const VSFrameRef *IT::GetFrame(IScriptEnvironment* env, int n)
 	return dst;
 }
 
-void IT::GetFrameSub(IScriptEnvironment* env, int n)
-{
+void IT::GetFrameSub(IScriptEnvironment * env, int n) {
 	if (n >= m_iMaxFrames)
 		return;
 	if (env->m_frameInfo[n].ip != 'U') {
@@ -152,18 +142,18 @@ void IT::GetFrameSub(IScriptEnvironment* env, int n)
 	ChooseBest(env, n);
 	env->m_frameInfo[n].match = static_cast<unsigned char>(env->m_iUseFrame);
 	switch (toupper(env->m_iUseFrame)) {
-	case 'C':
-		env->m_iSumM = env->m_iSumC;
-		env->m_iSumPM = env->m_iSumPC;
-		break;
-	case 'P':
-		env->m_iSumM = env->m_iSumP;
-		env->m_iSumPM = env->m_iSumPP;
-		break;
-	case 'N':
-		env->m_iSumM = env->m_iSumN;
-		env->m_iSumPM = env->m_iSumPN;
-		break;
+		case 'C':
+			env->m_iSumM = env->m_iSumC;
+			env->m_iSumPM = env->m_iSumPC;
+			break;
+		case 'P':
+			env->m_iSumM = env->m_iSumP;
+			env->m_iSumPM = env->m_iSumPP;
+			break;
+		case 'N':
+			env->m_iSumM = env->m_iSumN;
+			env->m_iSumPM = env->m_iSumPN;
+			break;
 	}
 
 	env->m_frameInfo[n].ivC = env->m_iSumC;
@@ -177,8 +167,7 @@ void IT::GetFrameSub(IScriptEnvironment* env, int n)
 	return;
 }
 
-const VSFrameRef* IT::MakeOutput(IScriptEnvironment* env, VSFrameRef* dst, int n)
-{
+const VSFrameRef* IT::MakeOutput(IScriptEnvironment * env, VSFrameRef * dst, int n) {
 	env->m_iCurrentFrame = n;
 
 	env->m_iSumC = env->m_frameInfo[n].ivC;
@@ -200,4 +189,3 @@ const VSFrameRef* IT::MakeOutput(IScriptEnvironment* env, VSFrameRef* dst, int n
 
 	return dst;
 }
-

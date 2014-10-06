@@ -35,8 +35,6 @@ class IT {
 
 	int width;
 	int height;
-	VSFrameRef* m_pvf[32];
-	int m_ipvfIndex[32];
 	int m_iMaxFrames;
 public:
 	const VSVideoInfo* vi;
@@ -75,7 +73,10 @@ public:
     const VSFrameRef* VS_CC MakeOutput(IScriptEnvironment* env, VSFrameRef* dst, int n);
 	bool CheckSceneChange(IScriptEnvironment* env, int n);
 	void GetFrameSub(IScriptEnvironment* env, int n);
-    void VS_CC EvalIV_YV12(IScriptEnvironment* env, int n, const VSFrameRef * ref, long &counter, long &counterp);
+
+	void VS_CC EvalIV_YV12(IScriptEnvironment* env, int n, const VSFrameRef * ref, long &counter, long &counterp);
+	void VS_CC SSE_EvalIV_YV12(IScriptEnvironment* env, int n, VSFrameRef const* ref, long& counter, long& counterp);
+	void VS_CC C_EvalIV_YV12(IScriptEnvironment* env, int n, VSFrameRef const* ref, long& counter, long& counterp);
 
 	void VS_CC MakeDEmap_YV12(IScriptEnvironment* env, const VSFrameRef * ref, int offset);
 	void VS_CC SSE_MakeDEmap_YV12(IScriptEnvironment* env, const VSFrameRef * ref, int offset);

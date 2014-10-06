@@ -18,40 +18,130 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301, USA
 
 #include "vs_it.h"
 
+__forceinline unsigned char eval_iv_asm(
+	unsigned const char * eax,
+	unsigned const char * ebx,
+	unsigned const char * ecx,
+	int i) {
+	auto a = eax[i];
+	auto b = ebx[i];
+	auto c = ecx[i];
+	auto ab = a > b ? a - b : b - a;
+	auto ac = a > c ? a - c : c - a;
+	auto bc = (b + c + 1) >> 1;
+	auto a_bc = a > bc ? a - bc : bc - a;
+	auto min_ab_ac = VSMIN(ab, ac);
+	return VSMIN(a_bc, min_ab_ac);
+}
+
+void IT::C_EvalIV_YV12(IScriptEnvironment * env, int n, const VSFrameRef * ref, long & counter, long & counterp) {
+	const VSFrameRef * srcC = env->GetFrame(clipFrame(n));
+
+	auto th = 40;
+	auto th2 = 6;
+
+	SSE_MakeDEmap_YV12(env, ref, 1);
+
+	const int widthminus16 = (width - 16) >> 1;
+	int sum = 0, sum2 = 0;
+	for (int yy = 16; yy < height - 16; yy += 2) {
+		int y;
+		y = yy + 1;
+		const unsigned char * pT = env->SYP(srcC, y - 1);
+		const unsigned char * pC = env->SYP(ref, y);
+		const unsigned char * pB = env->SYP(srcC, y + 1);
+		const unsigned char * pT_U = env->SYP(srcC, y - 1, 1);
+		const unsigned char * pC_U = env->SYP(ref, y, 1);
+		const unsigned char * pB_U = env->SYP(srcC, y + 1, 1);
+		const unsigned char * pT_V = env->SYP(srcC, y - 1, 2);
+		const unsigned char * pC_V = env->SYP(ref, y, 2);
+		const unsigned char * pB_V = env->SYP(srcC, y + 1, 2);
+
+		const unsigned char * peT = &env->m_edgeMap[clipY(y - 1) * width];
+		const unsigned char * peC = &env->m_edgeMap[clipY(y) * width];
+		const unsigned char * peB = &env->m_edgeMap[clipY(y + 1) * width];
+
+
+		for (int i = 16; i < widthminus16; i++) {
+			auto yl = eval_iv_asm(pC, pT, pB, i * 2);
+			auto yh = eval_iv_asm(pC, pT, pB, i * 2 + 1);
+			auto u = eval_iv_asm(pC_U, pT_U, pB_U, i);
+			auto v = eval_iv_asm(pC_V, pT_V, pB_V, i);
+
+			auto uv = VSMAX(u, v);
+			auto mm0l = VSMAX(yl, uv);
+			auto mm0h = VSMAX(yh, uv);
+			// mm0 <- max(y, max(u, v))
+
+			auto peCl = peC[i * 2];
+			auto peCh = peC[i * 2 + 1];
+			auto peTl = peT[i * 2];
+			auto peTh = peT[i * 2 + 1];
+			auto peBl = peB[i * 2];
+			auto peBh = peB[i * 2 + 1];
+			auto pel = VSMAX(peTl, peBl);
+			auto peh = VSMAX(peTh, peBh);
+			pel = VSMAX(pel, peCl);
+			peh = VSMAX(peh, peCh);
+			// pe <- max(peC, peT, peB)
+
+			// Saturate Subtract mm0 - pe * 2
+			mm0l = mm0l > pel ? mm0l - pel : 0;
+			mm0l = mm0l > pel ? mm0l - pel : 0;
+			mm0h = mm0h > peh ? mm0h - peh : 0;
+			mm0h = mm0h > peh ? mm0h - peh : 0;
+
+			sum += mm0l > th ? 1 : 0;
+			sum += mm0h > th ? 1 : 0;
+
+			sum2 += mm0l > th2 ? 1 : 0;
+			sum2 += mm0h > th2 ? 1 : 0;
+		}
+
+		if (sum > m_iPThreshold) {
+			sum = m_iPThreshold;
+			break;
+		}
+	}
+	counter = sum;
+	counterp = sum2;
+
+	env->FreeFrame(srcC);
+	return;
+}
+
 __forceinline unsigned char make_de_map_asm(
-	unsigned const char* eax,
-	unsigned const char* ebx,
-	unsigned const char* ecx,
+	unsigned const char * eax,
+	unsigned const char * ebx,
+	unsigned const char * ecx,
 	int i, int step, int offset) {
 	// return abs(a - (b + c) / 2)
-	auto a = eax[i*step + offset];
-	auto b = ebx[i*step + offset];
-	auto c = ecx[i*step + offset];
-	auto bc = (short(b) + short(c)) / 2;
+	auto a = eax[i * step + offset];
+	auto b = ebx[i * step + offset];
+	auto c = ecx[i * step + offset];
+	auto bc = (b + c + 1) >> 1;
 	auto delta = a - bc;
 	return static_cast<unsigned char>(delta >= 0 ? delta : -delta);
 }
 
-void IT::C_MakeDEmap_YV12(IScriptEnvironment*env, const VSFrameRef * ref, int offset)
-{
+void IT::C_MakeDEmap_YV12(IScriptEnvironment * env, const VSFrameRef * ref, int offset) {
 	const int twidth = width >> 1;
 
 	for (int yy = 0; yy < height; yy += 2) {
 		int y = yy + offset;
-		const unsigned char *pTT = env->SYP(ref, y - 2);
-		const unsigned char *pC = env->SYP(ref, y);
-		const unsigned char *pBB = env->SYP(ref, y + 2);
-		const unsigned char *pTT_U = env->SYP(ref, y - 2, 1);
-		const unsigned char *pC_U = env->SYP(ref, y, 1);
-		const unsigned char *pBB_U = env->SYP(ref, y + 2, 1);
-		const unsigned char *pTT_V = env->SYP(ref, y - 2, 2);
-		const unsigned char *pC_V = env->SYP(ref, y, 2);
-		const unsigned char *pBB_V = env->SYP(ref, y + 2, 2);
-		unsigned char *pED = env->m_edgeMap + y * width;
+		const unsigned char * pTT = env->SYP(ref, y - 2);
+		const unsigned char * pC = env->SYP(ref, y);
+		const unsigned char * pBB = env->SYP(ref, y + 2);
+		const unsigned char * pTT_U = env->SYP(ref, y - 2, 1);
+		const unsigned char * pC_U = env->SYP(ref, y, 1);
+		const unsigned char * pBB_U = env->SYP(ref, y + 2, 1);
+		const unsigned char * pTT_V = env->SYP(ref, y - 2, 2);
+		const unsigned char * pC_V = env->SYP(ref, y, 2);
+		const unsigned char * pBB_V = env->SYP(ref, y + 2, 2);
+		unsigned char * pED = env->m_edgeMap + y * width;
 
 		unsigned char y0, y1, u0, v0, uv;
-		for (int i = 0; i < twidth; i++)
-		{
+		for (int i = 0; i < twidth; i++) {
 			y0 = make_de_map_asm(pC, pTT, pBB, i, 2, 0);
 			y1 = make_de_map_asm(pC, pTT, pBB, i, 2, 1);
 			u0 = make_de_map_asm(pC_U, pTT_U, pBB_U, i, 1, 0);
@@ -63,8 +153,7 @@ void IT::C_MakeDEmap_YV12(IScriptEnvironment*env, const VSFrameRef * ref, int of
 	}
 }
 
-void IT::C_MakeMotionMap_YV12(IScriptEnvironment*env, int n, bool flag)
-{
+void IT::C_MakeMotionMap_YV12(IScriptEnvironment * env, int n, bool flag) {
 	n = clipFrame(n);
 	if (flag == false && env->m_frameInfo[n].diffP0 >= 0)
 		return;
@@ -75,15 +164,15 @@ void IT::C_MakeMotionMap_YV12(IScriptEnvironment*env, int n, bool flag)
 	const int widthminus16 = width - 16;
 	int i;
 
-	const VSFrameRef* srcP = env->GetFrame(clipFrame(n - 1));
-	const VSFrameRef* srcC = env->GetFrame(n);
+	const VSFrameRef * srcP = env->GetFrame(clipFrame(n - 1));
+	const VSFrameRef * srcC = env->GetFrame(n);
 	short bufP0[MAX_WIDTH];
 	unsigned char bufP1[MAX_WIDTH];
 	int pe0 = 0, po0 = 0, pe1 = 0, po1 = 0;
 	for (int yy = 16; yy < height - 16; ++yy) {
 		int y = yy;
-		const unsigned char *pC = env->SYP(srcC, y);
-		const unsigned char *pP = env->SYP(srcP, y);
+		const unsigned char * pC = env->SYP(srcC, y);
+		const unsigned char * pP = env->SYP(srcP, y);
 
 		for (i = 0; i < twidth; i++) {
 			bufP0[i] = static_cast<short>(pC[i]) - static_cast<short>(pP[i]);
