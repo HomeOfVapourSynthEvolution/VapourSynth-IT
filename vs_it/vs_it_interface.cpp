@@ -99,5 +99,5 @@ VS_EXTERNAL_API(void) VapourSynthPluginInit(VSConfigPlugin configFunc, VSRegiste
 	           VAPOURSYNTH_API_VERSION, 1, plugin);
 	registerFunc("it",
 	             "clip:clip;fps:int:opt;threshold:int:opt;pthreshold:int:opt;",
-	             itCreate, 0, plugin);
+	             itCreate, nullptr, plugin);
 }

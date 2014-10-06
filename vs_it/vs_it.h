@@ -30,6 +30,10 @@ class IT {
 	int width;
 	int height;
 	int m_iMaxFrames;
+
+	CFrameInfo *m_frameInfo;
+	CTFblockInfo *m_blockInfo;
+
 public:
 	const VSVideoInfo* vi;
 	VSNodeRef * node;
@@ -39,6 +43,10 @@ public:
 		int _threshold,
 		int _pthreshold,
 		const VSAPI *vsapi);
+	~IT() {
+		delete[] m_frameInfo;
+		delete[] m_blockInfo;
+	}
 	int AdjPara(int v) {
 		return (((v * width) / 720) * height) / 480;
 	}

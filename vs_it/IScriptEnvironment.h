@@ -44,8 +44,6 @@ class IScriptEnvironment
 {
 public:
 	int m_iRealFrame;
-	CFrameInfo *m_frameInfo;
-	CTFblockInfo *m_blockInfo;
 	unsigned char *m_edgeMap, *m_motionMap4DI, *m_motionMap4DIMax;
 
 	long m_iSumC, m_iSumP, m_iSumN, m_iSumM;

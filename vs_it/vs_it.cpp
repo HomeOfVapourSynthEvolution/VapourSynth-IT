@@ -39,6 +39,24 @@ IT::IT(VSVideoInfo * vi, VSNodeRef * node, int _fps, int _threshold, int _pthres
 		else
 			vi->fpsDen *= 5;
 	}
+
+	int i;
+
+	m_frameInfo = new CFrameInfo[m_iMaxFrames + 6];
+	for (i = 0; i < m_iMaxFrames + 6; ++i) {
+		m_frameInfo[i].match = 'U';
+		m_frameInfo[i].matchAcc = 'U';
+		m_frameInfo[i].pos = 'U';
+		m_frameInfo[i].ip = 'U';
+		m_frameInfo[i].mflag = 'U';
+		m_frameInfo[i].diffP0 = -1;
+		m_frameInfo[i].diffP1 = -1;
+	}
+	m_blockInfo = new CTFblockInfo[m_iMaxFrames / 5 + 6];
+	for (i = 0; i < m_iMaxFrames / 5 + 1; ++i) {
+		m_blockInfo[i].level = 'U';
+		m_blockInfo[i].itype = 'U';
+	}
 }
 
 void IT::GetFramePre(IScriptEnvironment * env, int n) {
@@ -56,24 +74,6 @@ void IT::GetFramePre(IScriptEnvironment * env, int n) {
 const VSFrameRef* IT::GetFrame(IScriptEnvironment * env, int n) {
 	++m_iCounter;
 	env->m_iRealFrame = n;
-	env->m_frameInfo = new CFrameInfo[m_iMaxFrames + 6];
-
-	int i;
-
-	for (i = 0; i < m_iMaxFrames + 6; ++i) {
-		env->m_frameInfo[i].match = 'U';
-		env->m_frameInfo[i].matchAcc = 'U';
-		env->m_frameInfo[i].pos = 'U';
-		env->m_frameInfo[i].ip = 'U';
-		env->m_frameInfo[i].mflag = 'U';
-		env->m_frameInfo[i].diffP0 = -1;
-		env->m_frameInfo[i].diffP1 = -1;
-	}
-	env->m_blockInfo = new CTFblockInfo[m_iMaxFrames / 5 + 6];
-	for (i = 0; i < m_iMaxFrames / 5 + 1; ++i) {
-		env->m_blockInfo[i].level = 'U';
-		env->m_blockInfo[i].itype = 'U';
-	}
 
 	env->m_edgeMap = new unsigned char[width * height];
 	memset(env->m_edgeMap, 0, width * height);
@@ -83,7 +83,6 @@ const VSFrameRef* IT::GetFrame(IScriptEnvironment * env, int n) {
 
 	env->m_motionMap4DIMax = new unsigned char[width * height];
 	memset(env->m_motionMap4DIMax, 0, width * height);
-
 
 	int tfFrame;
 	if (m_iFPS == 24) {
@@ -98,14 +97,14 @@ const VSFrameRef* IT::GetFrame(IScriptEnvironment * env, int n) {
 
 		bool iflag = true;
 		for (i = 0; i < 5; ++i) {
-			if (env->m_frameInfo[clipFrame(base + i)].ivC >= m_iPThreshold) {
+			if (m_frameInfo[clipFrame(base + i)].ivC >= m_iPThreshold) {
 				iflag = false;
 			}
 		}
-		env->m_blockInfo[base / 5].itype = iflag ? '3' : '2';
+		m_blockInfo[base / 5].itype = iflag ? '3' : '2';
 		int no = tfFrame - base;
 		for (i = 0; i < 5; ++i) {
-			char f = env->m_frameInfo[clipFrame(base + i)].mflag;
+			char f = m_frameInfo[clipFrame(base + i)].mflag;
 			if (f != 'D' && f != 'd' && f != 'X' && f != 'x' && f != 'y' && f != 'z' && f != 'R') {
 				if (no == 0)
 					break;
@@ -119,8 +118,6 @@ const VSFrameRef* IT::GetFrame(IScriptEnvironment * env, int n) {
 	}
 	VSFrameRef * dst = env->NewVideoFrame(vi);
 	MakeOutput(env, dst, n);
-	delete[] env->m_frameInfo;
-	delete[] env->m_blockInfo;
 	delete[] env->m_edgeMap;
 	delete[] env->m_motionMap4DI;
 	delete[] env->m_motionMap4DIMax;
@@ -130,7 +127,7 @@ const VSFrameRef* IT::GetFrame(IScriptEnvironment * env, int n) {
 void IT::GetFrameSub(IScriptEnvironment * env, int n) {
 	if (n >= m_iMaxFrames)
 		return;
-	if (env->m_frameInfo[n].ip != 'U') {
+	if (m_frameInfo[n].ip != 'U') {
 		return;
 	}
 	env->m_iCurrentFrame = n;
@@ -140,7 +137,7 @@ void IT::GetFrameSub(IScriptEnvironment * env, int n) {
 	env->m_bRefP = true;
 
 	ChooseBest(env, n);
-	env->m_frameInfo[n].match = static_cast<unsigned char>(env->m_iUseFrame);
+	m_frameInfo[n].match = static_cast<unsigned char>(env->m_iUseFrame);
 	switch (toupper(env->m_iUseFrame)) {
 		case 'C':
 			env->m_iSumM = env->m_iSumC;
@@ -156,33 +153,33 @@ void IT::GetFrameSub(IScriptEnvironment * env, int n) {
 			break;
 	}
 
-	env->m_frameInfo[n].ivC = env->m_iSumC;
-	env->m_frameInfo[n].ivP = env->m_iSumP;
-	env->m_frameInfo[n].ivN = env->m_iSumN;
-	env->m_frameInfo[n].ivM = env->m_iSumM;
-	env->m_frameInfo[n].ivPC = env->m_iSumPC;
-	env->m_frameInfo[n].ivPP = env->m_iSumPP;
-	env->m_frameInfo[n].ivPN = env->m_iSumPN;
-	env->m_frameInfo[n].ip = env->m_iSumM < m_iPThreshold && env->m_iSumPM < m_iPThreshold * 3 ? 'P' : 'I';
+	m_frameInfo[n].ivC = env->m_iSumC;
+	m_frameInfo[n].ivP = env->m_iSumP;
+	m_frameInfo[n].ivN = env->m_iSumN;
+	m_frameInfo[n].ivM = env->m_iSumM;
+	m_frameInfo[n].ivPC = env->m_iSumPC;
+	m_frameInfo[n].ivPP = env->m_iSumPP;
+	m_frameInfo[n].ivPN = env->m_iSumPN;
+	m_frameInfo[n].ip = env->m_iSumM < m_iPThreshold && env->m_iSumPM < m_iPThreshold * 3 ? 'P' : 'I';
 	return;
 }
 
 const VSFrameRef* IT::MakeOutput(IScriptEnvironment * env, VSFrameRef * dst, int n) {
 	env->m_iCurrentFrame = n;
 
-	env->m_iSumC = env->m_frameInfo[n].ivC;
-	env->m_iSumP = env->m_frameInfo[n].ivP;
-	env->m_iSumN = env->m_frameInfo[n].ivN;
-	env->m_iSumM = env->m_frameInfo[n].ivM;
-	env->m_iSumPC = env->m_frameInfo[n].ivPC;
-	env->m_iSumPP = env->m_frameInfo[n].ivPP;
-	env->m_iSumPN = env->m_frameInfo[n].ivPN;
+	env->m_iSumC = m_frameInfo[n].ivC;
+	env->m_iSumP = m_frameInfo[n].ivP;
+	env->m_iSumN = m_frameInfo[n].ivN;
+	env->m_iSumM = m_frameInfo[n].ivM;
+	env->m_iSumPC = m_frameInfo[n].ivPC;
+	env->m_iSumPP = m_frameInfo[n].ivPP;
+	env->m_iSumPN = m_frameInfo[n].ivPN;
 
 	env->m_bRefP = true;
 
-	env->m_iUseFrame = toupper(env->m_frameInfo[n].match);
+	env->m_iUseFrame = toupper(m_frameInfo[n].match);
 
-	if (env->m_frameInfo[n].ip == 'P')
+	if (m_frameInfo[n].ip == 'P')
 		CopyCPNField(env, dst, n);
 	else if (!DrawPrevFrame(env, dst, n))
 		DeintOneField_YV12(env, dst, n);

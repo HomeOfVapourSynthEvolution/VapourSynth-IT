@@ -255,7 +255,7 @@ void IT::MakeDEmap_YV12(IScriptEnvironment * env, const VSFrameRef * ref, int of
 
 void IT::MakeMotionMap_YV12(IScriptEnvironment * env, int n, bool flag) {
 	n = clipFrame(n);
-	if (flag == false && env->m_frameInfo[n].diffP0 >= 0)
+	if (flag == false && m_frameInfo[n].diffP0 >= 0)
 		return;
 
 
@@ -396,10 +396,10 @@ void IT::MakeMotionMap_YV12(IScriptEnvironment * env, int n, bool flag) {
 			po1 += tsum1;
 		}
 	}
-	env->m_frameInfo[n].diffP0 = pe0;
-	env->m_frameInfo[n].diffP1 = po0;
-	env->m_frameInfo[n].diffS0 = pe1;
-	env->m_frameInfo[n].diffS1 = po1;
+	m_frameInfo[n].diffP0 = pe0;
+	m_frameInfo[n].diffP1 = po0;
+	m_frameInfo[n].diffS0 = pe1;
+	m_frameInfo[n].diffS1 = po1;
 	env->FreeFrame(srcC);
 	env->FreeFrame(srcP);
 }

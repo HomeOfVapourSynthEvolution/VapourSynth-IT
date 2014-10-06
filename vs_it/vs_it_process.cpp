@@ -20,9 +20,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301, USA
 #include "vs_it_interface.h"
 
 void IT::SetFT(IScriptEnvironment * env, int base, int n, char c) {
-	env->m_frameInfo[clipFrame(base + n)].mflag = c;
-	env->m_blockInfo[base / 5].cfi = n;
-	env->m_blockInfo[base / 5].level = '0';
+	m_frameInfo[clipFrame(base + n)].mflag = c;
+	m_blockInfo[base / 5].cfi = n;
+	m_blockInfo[base / 5].level = '0';
 }
 
 void IT::ChooseBest(IScriptEnvironment * env, int n) {
@@ -41,26 +41,26 @@ void IT::ChooseBest(IScriptEnvironment * env, int n) {
 }
 
 void IT::Decide(IScriptEnvironment * env, int n) {
-	if (env->m_blockInfo[n / 5].level != 'U')
+	if (m_blockInfo[n / 5].level != 'U')
 		return;
 
 	int base = (n / 5) * 5;
 	int i;
-	int min0 = env->m_frameInfo[clipFrame(base)].diffP0;
+	int min0 = m_frameInfo[clipFrame(base)].diffP0;
 	for (i = 1; i < 5; ++i) {
-		min0 = VSMIN(min0, env->m_frameInfo[clipFrame(base + i)].diffP0);
+		min0 = VSMIN(min0, m_frameInfo[clipFrame(base + i)].diffP0);
 	}
 	int mmin = AdjPara(50);
 
 	for (i = 0; i < 5; ++i) {
-		int m = env->m_frameInfo[clipFrame(base + i)].diffP0;
-		env->m_frameInfo[clipFrame(base + i)].mflag = m >= VSMAX(mmin, min0) * 5 ? '.' : '+';
+		int m = m_frameInfo[clipFrame(base + i)].diffP0;
+		m_frameInfo[clipFrame(base + i)].mflag = m >= VSMAX(mmin, min0) * 5 ? '.' : '+';
 	}
 
 	int ncf = 0;
 	int cfi = -1;
 	for (i = 0; i < 5; ++i) {
-		if (env->m_frameInfo[clipFrame(base + i)].mflag == '.')
+		if (m_frameInfo[clipFrame(base + i)].mflag == '.')
 			++ncf;
 		else
 			cfi = i;
@@ -68,18 +68,18 @@ void IT::Decide(IScriptEnvironment * env, int n) {
 
 	int mmin2 = AdjPara(50);
 	if (ncf == 0) {
-		min0 = env->m_frameInfo[clipFrame(base)].diffS0;
+		min0 = m_frameInfo[clipFrame(base)].diffS0;
 		for (i = 1; i < 5; ++i) {
-			min0 = VSMIN(min0, env->m_frameInfo[clipFrame(base + i)].diffS0);
+			min0 = VSMIN(min0, m_frameInfo[clipFrame(base + i)].diffS0);
 		}
 		for (i = 0; i < 5; ++i) {
-			int m = env->m_frameInfo[clipFrame(base + i)].diffS0;
-			env->m_frameInfo[clipFrame(base + i)].mflag = m >= VSMAX(mmin2, min0) * 3 ? '.' : '+';
+			int m = m_frameInfo[clipFrame(base + i)].diffS0;
+			m_frameInfo[clipFrame(base + i)].mflag = m >= VSMAX(mmin2, min0) * 3 ? '.' : '+';
 		}
 		ncf = 0;
 		cfi = -1;
 		for (i = 0; i < 5; ++i) {
-			if (env->m_frameInfo[clipFrame(base + i)].mflag == '.')
+			if (m_frameInfo[clipFrame(base + i)].mflag == '.')
 				++ncf;
 			else
 				cfi = i;
@@ -96,27 +96,27 @@ void IT::Decide(IScriptEnvironment * env, int n) {
 			int rr = (i + 2 + 5) % 5;
 			int r = (i + 1 + 5) % 5;
 			int l = (i - 1 + 5) % 5;
-			if (env->m_frameInfo[clipFrame(base + i)].mflag != '.' && env->m_frameInfo[clipFrame(base + i)].match == 'P') {
-				if (env->m_frameInfo[clipFrame(base + i)].mflag == '+') {
-					env->m_frameInfo[clipFrame(base + i)].mflag = '*';
+			if (m_frameInfo[clipFrame(base + i)].mflag != '.' && m_frameInfo[clipFrame(base + i)].match == 'P') {
+				if (m_frameInfo[clipFrame(base + i)].mflag == '+') {
+					m_frameInfo[clipFrame(base + i)].mflag = '*';
 					flag = true;
 				}
-				if (env->m_frameInfo[clipFrame(base + r)].mflag == '+') {
-					env->m_frameInfo[clipFrame(base + r)].mflag = '*';
+				if (m_frameInfo[clipFrame(base + r)].mflag == '+') {
+					m_frameInfo[clipFrame(base + r)].mflag = '*';
 					flag = true;
 				}
-				if (env->m_frameInfo[clipFrame(base + l)].mflag == '+') {
-					env->m_frameInfo[clipFrame(base + l)].mflag = '*';
+				if (m_frameInfo[clipFrame(base + l)].mflag == '+') {
+					m_frameInfo[clipFrame(base + l)].mflag = '*';
 					flag = true;
 				}
 			}
-			if (env->m_frameInfo[clipFrame(base + i)].match == 'N') {
-				if (env->m_frameInfo[clipFrame(base + r)].mflag == '+') {
-					env->m_frameInfo[clipFrame(base + r)].mflag = '*';
+			if (m_frameInfo[clipFrame(base + i)].match == 'N') {
+				if (m_frameInfo[clipFrame(base + r)].mflag == '+') {
+					m_frameInfo[clipFrame(base + r)].mflag = '*';
 					flag = true;
 				}
-				if (env->m_frameInfo[clipFrame(base + rr)].mflag == '+') {
-					env->m_frameInfo[clipFrame(base + rr)].mflag = '*';
+				if (m_frameInfo[clipFrame(base + rr)].mflag == '+') {
+					m_frameInfo[clipFrame(base + rr)].mflag = '*';
 					flag = true;
 				}
 			}
@@ -127,29 +127,29 @@ void IT::Decide(IScriptEnvironment * env, int n) {
 
 		if (flag) {
 			for (i = 0; i < 5; ++i) {
-				char c = env->m_frameInfo[clipFrame(base + i)].mflag;
+				char c = m_frameInfo[clipFrame(base + i)].mflag;
 				if (c == '+')
-					env->m_frameInfo[clipFrame(base + i)].mflag = '*';
+					m_frameInfo[clipFrame(base + i)].mflag = '*';
 				if (c == '*')
-					env->m_frameInfo[clipFrame(base + i)].mflag = '+';
+					m_frameInfo[clipFrame(base + i)].mflag = '+';
 			}
 		}
 		for (i = 0; i < 5; ++i) {
-			if (env->m_frameInfo[clipFrame(base + i)].pos == '2') {
+			if (m_frameInfo[clipFrame(base + i)].pos == '2') {
 				SetFT(env, base, i, 'd');
 				return;
 			}
 		}
-		if (base - 5 >= 0 && env->m_blockInfo[base / 5 - 1].level != 'U') {
-			int tcfi = env->m_blockInfo[base / 5 - 1].cfi;
-			if (env->m_frameInfo[base + tcfi].mflag == '+') {
+		if (base - 5 >= 0 && m_blockInfo[base / 5 - 1].level != 'U') {
+			int tcfi = m_blockInfo[base / 5 - 1].cfi;
+			if (m_frameInfo[base + tcfi].mflag == '+') {
 				SetFT(env, base, tcfi, 'y');
 				return;
 			}
 		}
 		int pnpos[5], pncnt = 0;
 		for (i = 0; i < 5; ++i) {
-			if (toupper(env->m_frameInfo[clipFrame(base + i)].match) == 'P') {
+			if (toupper(m_frameInfo[clipFrame(base + i)].match) == 'P') {
 				pnpos[pncnt++] = i;
 			}
 		}
@@ -158,7 +158,7 @@ void IT::Decide(IScriptEnvironment * env, int n) {
 			if (pnpos[0] == 0 && pnpos[1] == 4) {
 				k = 4;
 			}
-			if (env->m_frameInfo[clipFrame(base + k)].mflag != '.') {
+			if (m_frameInfo[clipFrame(base + k)].mflag != '.') {
 				SetFT(env, base, k, 'x');
 				return;
 			}
@@ -166,7 +166,7 @@ void IT::Decide(IScriptEnvironment * env, int n) {
 
 		pncnt = 0;
 		for (i = 0; i < 5; ++i) {
-			if (toupper(env->m_frameInfo[clipFrame(base + i)].match) != 'N') {
+			if (toupper(m_frameInfo[clipFrame(base + i)].match) != 'N') {
 				pnpos[pncnt++] = i;
 			}
 		}
@@ -176,14 +176,14 @@ void IT::Decide(IScriptEnvironment * env, int n) {
 				k = 4;
 			}
 			k = (k + 2) % 5;
-			if (env->m_frameInfo[clipFrame(base + k)].mflag != '.') {
+			if (m_frameInfo[clipFrame(base + k)].mflag != '.') {
 				SetFT(env, base, k, 'x');
 				return;
 			}
 		}
 
 		for (i = 0; i < 5; ++i) {
-			if (env->m_frameInfo[clipFrame(base + i)].mflag == '+') {
+			if (m_frameInfo[clipFrame(base + i)].mflag == '+') {
 				SetFT(env, base, i, 'd');
 				return;
 			}
@@ -191,9 +191,9 @@ void IT::Decide(IScriptEnvironment * env, int n) {
 	}
 
 	cfi = 0;
-	int minx = env->m_frameInfo[clipFrame(base)].diffS0;
+	int minx = m_frameInfo[clipFrame(base)].diffS0;
 	for (i = 1; i < 5; ++i) {
-		int m = env->m_frameInfo[clipFrame(base + i)].diffS0;
+		int m = m_frameInfo[clipFrame(base + i)].diffS0;
 		if (m < minx) {
 			cfi = i;
 			minx = m;
@@ -319,14 +319,14 @@ void IT::DeintOneField_YV12(IScriptEnvironment * env, VSFrameRef * dst, int n) {
 
 bool IT::CompCP(IScriptEnvironment * env) {
 	int n = env->m_iCurrentFrame;
-	int p0 = env->m_frameInfo[n].diffP0;
-	int p1 = env->m_frameInfo[n].diffP1;
-	int n0 = env->m_frameInfo[clipFrame(n + 1)].diffP0;
-	int n1 = env->m_frameInfo[clipFrame(n + 1)].diffP1;
-	int ps0 = env->m_frameInfo[n].diffS0;
-	int ps1 = env->m_frameInfo[n].diffS1;
-	int ns0 = env->m_frameInfo[clipFrame(n + 1)].diffS0;
-	int ns1 = env->m_frameInfo[clipFrame(n + 1)].diffS1;
+	int p0 = m_frameInfo[n].diffP0;
+	int p1 = m_frameInfo[n].diffP1;
+	int n0 = m_frameInfo[clipFrame(n + 1)].diffP0;
+	int n1 = m_frameInfo[clipFrame(n + 1)].diffP1;
+	int ps0 = m_frameInfo[n].diffS0;
+	int ps1 = m_frameInfo[n].diffS1;
+	int ns0 = m_frameInfo[clipFrame(n + 1)].diffS0;
+	int ns1 = m_frameInfo[clipFrame(n + 1)].diffS1;
 
 	int th = AdjPara(5);
 	int thm = AdjPara(5);
@@ -392,20 +392,20 @@ bool IT::CompCP(IScriptEnvironment * env) {
 			return false;
 		}
 	}
-	env->m_frameInfo[n].pos = '.';
+	m_frameInfo[n].pos = '.';
 	if (env->m_iSumP >= env->m_iSumC) {
 		env->m_iUseFrame = 'C';
 		if (!spe) {
-			env->m_frameInfo[n].pos = '.';
+			m_frameInfo[n].pos = '.';
 		}
 	}
 	else {
 		env->m_iUseFrame = 'P';
 		if (spe && !sno) {
-			env->m_frameInfo[n].pos = '2';
+			m_frameInfo[n].pos = '2';
 		}
 		if (!spe && sno) {
-			env->m_frameInfo[n].pos = '3';
+			m_frameInfo[n].pos = '3';
 		}
 	}
 	return true;
@@ -425,11 +425,11 @@ bool IT::DrawPrevFrame(IScriptEnvironment * env, VSFrameRef * dst, int n) {
 
 	env->m_iCurrentFrame = nOldCurrentFrame;
 
-	if (env->m_frameInfo[nPrevFrame].ip == 'P' && env->m_frameInfo[nNextFrame].ip == 'P')
+	if (m_frameInfo[nPrevFrame].ip == 'P' && m_frameInfo[nNextFrame].ip == 'P')
 		bResult = CheckSceneChange(env, n);
 
 	if (bResult) {
-		env->m_iUseFrame = env->m_frameInfo[nPrevFrame].match;
+		env->m_iUseFrame = m_frameInfo[nPrevFrame].match;
 		CopyCPNField(env, dst, nPrevFrame);
 	}
 
