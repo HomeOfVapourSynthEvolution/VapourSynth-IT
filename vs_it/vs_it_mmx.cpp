@@ -16,30 +16,9 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301, USA.
 */
 
+#if !defined(__SSE) && !defined(__C)
+
 #include "vs_it.h"
-#include "IScriptEnvironment.h"
-
-void IT::SetFT(IScriptEnvironment*env, int base, int n, char c)
-{
-    env->m_frameInfo[clipFrame(base + n)].mflag = c;
-	env->m_blockInfo[base / 5].cfi = n;
-	env->m_blockInfo[base / 5].level = '0';
-}
-
-void IT::ChooseBest(IScriptEnvironment* env, int n)
-{
-	const VSFrameRef* srcC = env->GetFrame(clipFrame(n));
-	//	MakeMotionMap(m_iCurrentFrame - 1, false);
-	MakeMotionMap_YV12(env, env->m_iCurrentFrame, false);
-	MakeMotionMap_YV12(env, env->m_iCurrentFrame + 1, false);
-	MakeDEmap_YV12(env, srcC, 0);
-	EvalIV_YV12(env, n, srcC, env->m_iSumC, env->m_iSumPC);
-	const VSFrameRef* srcP = env->GetFrame(clipFrame(n - 1));
-	EvalIV_YV12(env, n, srcP, env->m_iSumP, env->m_iSumPP);
-	CompCP(env);
-	env->FreeFrame(srcC);
-	env->FreeFrame(srcP);
-}
 
 #define EVAL_IV_ASM_INIT(C, T, B) \
 	__asm mov rax, C \
@@ -370,176 +349,158 @@ void IT::MakeMotionMap_YV12(IScriptEnvironment*env, int n, bool flag)
 	env->FreeFrame(srcP);
 }
 
-bool IT::CompCP(IScriptEnvironment*env)
+#define MAKE_MOTION_MAP2_ASM_INIT(C, P) \
+	__asm mov rax, C \
+	__asm mov rbx, P
+
+#define MAKE_MOTION_MAP2_ASM(mmm, step) \
+	__asm movq mmm, [rax + rsi*step] \
+	__asm movq mm2, mmm \
+	__asm movq mm1, [rbx + rsi*step] \
+	__asm psubusb mmm, mm1 \
+	__asm psubusb mm1, mm2 \
+	__asm por mmm, mm1
+
+void IT::MakeMotionMap2Max_YV12(IScriptEnvironment*env, int n)
 {
-	int n = env->m_iCurrentFrame;
-	int p0 = env->m_frameInfo[n].diffP0;
-	int p1 = env->m_frameInfo[n].diffP1;
-	int n0 = env->m_frameInfo[clipFrame(n + 1)].diffP0;
-	int n1 = env->m_frameInfo[clipFrame(n + 1)].diffP1;
-	int ps0 = env->m_frameInfo[n].diffS0;
-	int ps1 = env->m_frameInfo[n].diffS1;
-	int ns0 = env->m_frameInfo[clipFrame(n + 1)].diffS0;
-	int ns1 = env->m_frameInfo[clipFrame(n + 1)].diffS1;
+	const int twidth = width >> 1;
 
-	int th = AdjPara(5);
-	int thm = AdjPara(5);
-	int ths = AdjPara(200);
+	const VSFrameRef* srcP = env->GetFrame(n - 1);
+	const VSFrameRef* srcC = env->GetFrame(n);
+	const VSFrameRef* srcN = env->GetFrame(n + 1);
 
-	bool spe = p0 < th && ps0 < ths;
-	bool spo = p1 < th && ps1 < ths;
-	bool sne = n0 < th && ns0 < ths;
-	bool sno = n1 < th && ns1 < ths;
+	for (int y = 0; y < height; y++) {
+		unsigned char *pD = env->m_motionMap4DIMax + y * width;
+		{
+			const unsigned char *pC = env->SYP(srcC, y);
+			const unsigned char *pP = env->SYP(srcP, y);
+			const unsigned char *pN = env->SYP(srcN, y);
+			const unsigned char *pC_U = env->SYP(srcC, y, 1);
+			const unsigned char *pP_U = env->SYP(srcP, y, 1);
+			const unsigned char *pN_U = env->SYP(srcN, y, 1);
+			const unsigned char *pC_V = env->SYP(srcC, y, 2);
+			const unsigned char *pP_V = env->SYP(srcP, y, 2);
+			const unsigned char *pN_V = env->SYP(srcN, y, 2);
 
-	bool mpe = p0 > thm;
-	bool mpo = p1 > thm;
-	bool mne = n0 > thm;
-	bool mno = n1 > thm;
+			_asm {
+				mov rdi, pD
+					xor esi, esi
+					align 16
+				loopA:
+				///P
+				MAKE_MOTION_MAP2_ASM_INIT(pC, pP)
+					MAKE_MOTION_MAP2_ASM(mm0, 2)
 
-	//1773
-	int thcomb = AdjPara(20);
-	if (n != 0) {
-		if ((env->m_iSumC < thcomb && env->m_iSumP < thcomb) || abs(env->m_iSumC - env->m_iSumP) * 10 < env->m_iSumC + env->m_iSumP) {
-			if (abs(env->m_iSumC - env->m_iSumP) > AdjPara(8))
-			{
-				env->m_iUseFrame = env->m_iSumP >= env->m_iSumC ? 'c' : 'p';
-				return true;
-			}
-			if (abs(env->m_iSumPC - env->m_iSumPP) > AdjPara(10))
-			{
-				env->m_iUseFrame = env->m_iSumPP >= env->m_iSumPC ? 'c' : 'p';
-				return true;
-			}
+					MAKE_MOTION_MAP2_ASM_INIT(pC_U, pP_U)
+					MAKE_MOTION_MAP2_ASM(mm3, 1)
 
-			if (spe && mpo) {
-				env->m_iUseFrame = 'p';
-				return true;
-			}
-			if (mpe && spo) {
-				env->m_iUseFrame = 'c';
-				return true;
-			}
-			if (mne && sno) {
-				env->m_iUseFrame = 'p';
-				return true;
-			}
-			if (sne && mno) {
-				env->m_iUseFrame = 'c';
-				return true;
-			}
-			if (spe && spo) {
-				env->m_iUseFrame = 'c';
-				return false;
-			}
-			if (sne && sno) {
-				env->m_iUseFrame = 'c';
-				return false;
-			}
-			if (mpe && mpo && mne && mno) {
-				env->m_iUseFrame = 'c';
-				return false;
-			}
+					MAKE_MOTION_MAP2_ASM_INIT(pC_V, pP_V)
+					MAKE_MOTION_MAP2_ASM(mm4, 1)
 
-			if (env->m_iSumPC > env->m_iSumPP) {
-				env->m_iUseFrame = 'p';
-				return true;
+					pmaxub mm3, mm4
+					punpcklbw mm3, mm3
+					pmaxub mm0, mm3
+
+					///N
+					MAKE_MOTION_MAP2_ASM_INIT(pC, pN)
+					MAKE_MOTION_MAP2_ASM(mm5, 2)
+
+					MAKE_MOTION_MAP2_ASM_INIT(pC_U, pN_U)
+					MAKE_MOTION_MAP2_ASM(mm3, 1)
+
+					MAKE_MOTION_MAP2_ASM_INIT(pC_V, pN_V)
+					MAKE_MOTION_MAP2_ASM(mm4, 1)
+
+					pmaxub mm3, mm4
+					punpcklbw mm3, mm3
+					pmaxub mm5, mm3
+
+					pmaxub mm0, mm5
+
+					lea esi, [esi + 4]
+					cmp esi, twidth
+					movntq[rdi + rsi * 2 - 8], mm0
+					jl loopA
 			}
-			env->m_iUseFrame = 'c';
-			return false;
 		}
 	}
-	//	env->m_frameInfo[clipFrame(n)].matchAcc = '0';
-	//	if (env->m_iSumC > env->m_iSumP) {
-	//	} else {
-	//		env->m_iUseFrame = 'C';
-	//		return false;
-	//	}
-	env->m_frameInfo[n].pos = '.';
-	if (env->m_iSumP >= env->m_iSumC) {
-		env->m_iUseFrame = 'C';
-		if (!spe) {
-			env->m_frameInfo[n].pos = '.';
-		}
-	}
-	else {
-		env->m_iUseFrame = 'P';
-		if (spe && !sno) {
-			env->m_frameInfo[n].pos = '2';
-		}
-		if (!spe && sno) {
-			env->m_frameInfo[n].pos = '3';
-		}
-	}
-	return true;
+	USE_MMX2;
+	env->FreeFrame(srcC);
+	env->FreeFrame(srcP);
+	env->FreeFrame(srcN);
 }
 
-bool IT::DrawPrevFrame(IScriptEnvironment*env, VSFrameRef * dst, int n)
+#define MAKE_BLUR_MAP_ASM(mmA, mmB) \
+	__asm movq mm7, mmA \
+	__asm psubusb mmA, mmB \
+	__asm psubusb mmB, mm7 \
+	__asm por mmA, mmB
+
+void IT::MakeSimpleBlurMap_YV12(IScriptEnvironment*env, int n)
 {
-	bool bResult = false;
-
-	int nPrevFrame = clipFrame(n - 1);
-	int nNextFrame = clipFrame(n + 1);
-
-	int nOldCurrentFrame = env->m_iCurrentFrame;
-	int nOldUseFrame = env->m_iUseFrame;
-
-	GetFrameSub(env, nPrevFrame);
-	GetFrameSub(env, nNextFrame);
-
-	env->m_iCurrentFrame = nOldCurrentFrame;
-
-	if (env->m_frameInfo[nPrevFrame].ip == 'P' && env->m_frameInfo[nNextFrame].ip == 'P')
-	{
-		bResult = CheckSceneChange(env, n);
-	}
-
-	if (bResult)
-	{
-		env->m_iUseFrame = env->m_frameInfo[nPrevFrame].match;
-
-		CopyCPNField(env, dst, nPrevFrame);
-	}
-
-	env->m_iUseFrame = nOldUseFrame;
-
-	return bResult;
-}
-
-void IT::CopyCPNField(IScriptEnvironment* env, VSFrameRef * dst, int n)
-{
-	const VSFrameRef* srcC = env->GetFrame(clipFrame(n));
-	const VSFrameRef* srcR;
+	int twidth = width;
+	const VSFrameRef * srcC = env->GetFrame(n);
+	const VSFrameRef *srcR;
 	switch (toupper(env->m_iUseFrame)) {
 	default:
 	case 'C':
 		srcR = srcC;
 		break;
 	case 'P':
-		srcR = env->GetFrame(clipFrame(n - 1));
+		srcR = env->GetFrame(n - 1);
 		break;
 	case 'N':
-		srcR = env->GetFrame(clipFrame(n + 1));
+		srcR = env->GetFrame(n + 1);
 		break;
 	}
-
-	int nPitch = env->vsapi->getStride(dst, 0);
-	int nRowSize = width;
-	int nPitchU = env->vsapi->getStride(dst, 1);
-	int nRowSizeU = width >> vi->format->subSamplingW;
-
-	for (int yy = 0; yy < height; yy += 2) {
-		int y, yo;
-		y = yy + 1;
-		yo = yy + 0;
-        vs_bitblt(env->DYP(dst, yo), nPitch, env->SYP(srcC, yo), nPitch, nRowSize, 1);
-        vs_bitblt(env->DYP(dst, y), nPitch, env->SYP(srcR, y), nPitch, nRowSize, 1);
-
-		if ((yy >> 1) % 2)
+	const unsigned char *pT;
+	const unsigned char *pC;
+	const unsigned char *pB;
+	for (int y = 0; y < height; y++)
+	{
+		unsigned char *pD = env->m_motionMap4DI + y * width;
 		{
-            vs_bitblt(env->DYP(dst, yo, 1), nPitchU, env->SYP(srcC, yo, 1), nPitchU, nRowSizeU, 1);
-            vs_bitblt(env->DYP(dst, y, 1), nPitchU, env->SYP(srcR, y, 1), nPitchU, nRowSizeU, 1);
-            vs_bitblt(env->DYP(dst, yo, 2), nPitchU, env->SYP(srcC, yo, 2), nPitchU, nRowSizeU, 1);
-            vs_bitblt(env->DYP(dst, y, 2), nPitchU, env->SYP(srcR, y, 2), nPitchU, nRowSizeU, 1);
+			if (y % 2)
+			{
+				pT = env->SYP(srcC, y - 1);
+				pC = env->SYP(srcR, y);
+				pB = env->SYP(srcC, y + 1);
+			}
+			else
+			{
+				pT = env->SYP(srcR, y - 1);
+				pC = env->SYP(srcC, y);
+				pB = env->SYP(srcR, y + 1);
+			}
+			_asm {
+				mov rax, pC
+					mov rbx, pT
+					mov rcx, pB
+					mov rdi, pD
+					xor esi, esi
+					align 16
+				loopA:
+				movq mm0, [rax + rsi]
+					movq mm1, [rbx + rsi]
+					movq mm2, mm0
+					movq mm3, mm1
+					MAKE_BLUR_MAP_ASM(mm0, mm1)
+
+					movq mm4, [rcx + rsi]
+					movq mm1, mm4
+					MAKE_BLUR_MAP_ASM(mm2, mm4)
+
+					MAKE_BLUR_MAP_ASM(mm3, mm1)
+
+					paddusb mm0, mm2
+					psubusb mm0, mm3
+					psubusb mm0, mm3
+
+					lea esi, [esi + 8]
+					cmp esi, twidth
+					movntq[rdi + rsi - 8], mm0
+					jl loopA
+			}
 		}
 	}
 	USE_MMX2;
@@ -547,31 +508,4 @@ void IT::CopyCPNField(IScriptEnvironment* env, VSFrameRef * dst, int n)
 		env->FreeFrame(srcR);
 	env->FreeFrame(srcC);
 }
-
-bool IT::CheckSceneChange(IScriptEnvironment*env, int n)
-{
-	const VSFrameRef* srcP = env->GetFrame(clipFrame(n - 1));
-	const VSFrameRef* srcC = env->GetFrame(clipFrame(n));
-
-	int rowSize = env->vsapi->getStride(srcC, 0);
-
-	int sum3 = 0;
-	int x, y;
-
-	int startY = 1;
-
-	for (y = startY; y < height; y += 2)
-	{
-		const unsigned char *pC = env->SYP(srcC, y);
-		const unsigned char *pP = env->SYP(srcP, y);
-
-		for (x = 0; x < rowSize; x++)
-		{
-			int a = abs(pC[x] - pP[x]);
-			if (a > 50) sum3 += 1;
-		}
-	}
-	env->FreeFrame(srcP);
-	env->FreeFrame(srcC);
-	return sum3 > height * rowSize / 8;
-}
+#endif

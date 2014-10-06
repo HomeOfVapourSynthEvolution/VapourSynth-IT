@@ -25,12 +25,13 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301, USA
 #include <stdint.h>
 #include <VapourSynth.h>
 #include <VSHelper.h>
-#include "emmintrin.h"
 
 #ifdef _MSC_VER
+#include <intrin.h>
 #define alignas(x) __declspec(align(x))
 #define ALIGNED_ARRAY(decl, alignment) alignas(alignment) decl
 #else
+#include <x86intrin.h>
 #define __forceinline inline
 #define ALIGNED_ARRAY(decl, alignment) __attribute__((aligned(alignment))) decl
 #endif
