@@ -76,11 +76,16 @@ public:
 	bool CheckSceneChange(IScriptEnvironment* env, int n);
 	void GetFrameSub(IScriptEnvironment* env, int n);
     void VS_CC EvalIV_YV12(IScriptEnvironment* env, int n, const VSFrameRef * ref, long &counter, long &counterp);
+
 	void VS_CC MakeDEmap_YV12(IScriptEnvironment* env, const VSFrameRef * ref, int offset);
 	void VS_CC SSE_MakeDEmap_YV12(IScriptEnvironment* env, const VSFrameRef * ref, int offset);
+	void VS_CC C_MakeDEmap_YV12(IScriptEnvironment* env, VSFrameRef const* ref, int offset);
+
 	void VS_CC MakeMotionMap_YV12(IScriptEnvironment* env, int fno, bool flag);
 	void VS_CC SSE_MakeMotionMap_YV12(IScriptEnvironment* env, int fno, bool flag);
-    void VS_CC MakeMotionMap2Max_YV12(IScriptEnvironment* env, int fno);
+	void VS_CC C_MakeMotionMap_YV12(IScriptEnvironment* env, int n, bool flag);
+
+	void VS_CC MakeMotionMap2Max_YV12(IScriptEnvironment* env, int fno);
     void VS_CC MakeSimpleBlurMap_YV12(IScriptEnvironment* env, int fno);
     void VS_CC CopyCPNField(IScriptEnvironment* env, VSFrameRef * dst, int n);
     void VS_CC DeintOneField_YV12(IScriptEnvironment* env, VSFrameRef * dst, int n);

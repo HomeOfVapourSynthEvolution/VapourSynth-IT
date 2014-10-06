@@ -85,9 +85,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="vs_it_c.cpp" />
     <ClCompile Include="vs_it.cpp" />
     <ClCompile Include="vs_it_interface.cpp" />
-    <ClCompile Include="vs_it_misc.cpp" />
+    <ClCompile Include="vs_it_mmx.cpp" />
     <ClCompile Include="vs_it_process.cpp" />
     <ClCompile Include="vs_it_sse.cpp" />
   </ItemGroup>

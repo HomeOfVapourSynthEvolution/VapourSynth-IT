@@ -23,12 +23,13 @@ __forceinline __m128i make_de_map_asm(
 	unsigned const char* ebx,
 	unsigned const char* ecx,
 	int i, int step, int offset) {
-	__m128i mma = _mm_load_si128(reinterpret_cast<const __m128i*>(eax + i * step + offset));
-	__m128i mmb = _mm_load_si128(reinterpret_cast<const __m128i*>(ebx + i * step + offset));
-	__m128i mmc = _mm_load_si128(reinterpret_cast<const __m128i*>(ecx + i * step + offset));
-	__m128i mmbc = _mm_avg_epu8(mmb, mmc);
-	__m128i mmabc = _mm_subs_epu8(mma, mmbc);
-	__m128i mmbca = _mm_subs_epu8(mmbc, mma);
+	auto mma = _mm_load_si128(reinterpret_cast<const __m128i*>(eax + i * step + offset));
+	auto mmb = _mm_load_si128(reinterpret_cast<const __m128i*>(ebx + i * step + offset));
+	auto mmc = _mm_load_si128(reinterpret_cast<const __m128i*>(ecx + i * step + offset));
+	auto mmbc = _mm_avg_epu8(mmb, mmc);
+	// subs+subs+or seems to be faster than sub+abs
+	auto mmabc = _mm_subs_epu8(mma, mmbc);
+	auto mmbca = _mm_subs_epu8(mmbc, mma);
 	return _mm_or_si128(mmabc, mmbca);
 }
 
