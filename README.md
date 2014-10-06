@@ -1,6 +1,6 @@
 # VapourSynth-IT
 
-VS_IT.dll v0103.0.4 Copyright(C) 2002 thejam79, 2003 minamina, 2014 msg7086
+VS_IT.dll v0103.1.0 Copyright(C) 2002 thejam79, 2003 minamina, 2014 msg7086
 
 VapourSynth Plugin - Inverse Telecine (YV12 Only, IT-0051 base, IT_YV12-0103 base)
 
@@ -57,12 +57,17 @@ This is a partial porting.
 - `diMode` has been removed. Only mode = 3 is ported, AFAIK mode 3 is working best.
 - You are welcome to send PR if you think it's necessary.
 
-This plugin can only be compiled by VC++ due to inline asm.
+This plugin has 3 code base,
 
-You are welcome to send PR if you can rewrite them into GCC-compatible code, or help to improve the code quality.
+- The original MMX
+- Pure C routine (`-D__C`)
+- SSE2 intrinsics (`-D__SSE`)
+
+You are welcome to send PR if you can help to improve the code quality.
 
 ## ChangeLog
 
+- v1.0  14/10/06 All inline asm code has been translated to pure C and SSE2 intrinsics. SSE2 comes with 30% speed up compared to original MMX code.
 - v0.4  14/10/04 Code cleanup. Special thanks to macromizer for cleaning up macros.
 - v0.3  14/10/03 Code cleanup, multiple instances problem fixed
 - v0.2  14/10/01 64-bit/8k mod patched
