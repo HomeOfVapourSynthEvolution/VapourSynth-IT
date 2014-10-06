@@ -16,6 +16,8 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301, USA.
 */
 
+#if !defined(__SSE) && !defined(__C)
+
 #include "vs_it.h"
 
 #define EVAL_IV_ASM_INIT(C, T, B) \
@@ -57,11 +59,7 @@ void IT::EvalIV_YV12(IScriptEnvironment *env, int n, const VSFrameRef * ref, lon
 		th2[i] = 6;
 	}
 
-#ifdef __SSE
-	SSE_MakeDEmap_YV12(env, ref, 1);
-#else
 	MakeDEmap_YV12(env, ref, 1);
-#endif
 
 	const int widthminus16 = (width - 16) >> 1;
 	int sum = 0, sum2 = 0;
@@ -510,3 +508,4 @@ void IT::MakeSimpleBlurMap_YV12(IScriptEnvironment*env, int n)
 		env->FreeFrame(srcR);
 	env->FreeFrame(srcC);
 }
+#endif

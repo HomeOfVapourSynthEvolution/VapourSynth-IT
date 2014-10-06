@@ -28,20 +28,13 @@ void IT::SetFT(IScriptEnvironment * env, int base, int n, char c) {
 void IT::ChooseBest(IScriptEnvironment * env, int n) {
 	const VSFrameRef * srcC = env->GetFrame(clipFrame(n));
 	const VSFrameRef * srcP = env->GetFrame(clipFrame(n - 1));
-	//	MakeMotionMap(m_iCurrentFrame - 1, false);
-#ifdef __SSE
-	SSE_MakeMotionMap_YV12(env, env->m_iCurrentFrame, false);
-	SSE_MakeMotionMap_YV12(env, env->m_iCurrentFrame + 1, false);
-	SSE_MakeDEmap_YV12(env, srcC, 0);
-	SSE_EvalIV_YV12(env, n, srcC, env->m_iSumC, env->m_iSumPC);
-	SSE_EvalIV_YV12(env, n, srcP, env->m_iSumP, env->m_iSumPP);
-#else
+
 	MakeMotionMap_YV12(env, env->m_iCurrentFrame, false);
 	MakeMotionMap_YV12(env, env->m_iCurrentFrame + 1, false);
 	MakeDEmap_YV12(env, srcC, 0);
 	EvalIV_YV12(env, n, srcC, env->m_iSumC, env->m_iSumPC);
 	EvalIV_YV12(env, n, srcP, env->m_iSumP, env->m_iSumPP);
-#endif
+
 	CompCP(env);
 	env->FreeFrame(srcC);
 	env->FreeFrame(srcP);
@@ -243,13 +236,8 @@ void IT::DeintOneField_YV12(IScriptEnvironment * env, VSFrameRef * dst, int n) {
 	unsigned char * pDB_U;
 	unsigned char * pDB_V;
 
-#ifdef __SSE
-	MakeSimpleBlurMap_YV12(env, env->m_iCurrentFrame);
-	SSE_MakeMotionMap2Max_YV12(env, env->m_iCurrentFrame);
-#else
 	MakeSimpleBlurMap_YV12(env, env->m_iCurrentFrame);
 	MakeMotionMap2Max_YV12(env, env->m_iCurrentFrame);
-#endif
 
 	unsigned char * pFieldMap;
 	pFieldMap = new unsigned char[width * height];

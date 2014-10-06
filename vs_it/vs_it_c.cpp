@@ -16,6 +16,8 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301, USA.
 */
 
+#ifdef __C
+
 #include "vs_it.h"
 
 __forceinline unsigned char eval_iv_asm(
@@ -34,13 +36,17 @@ __forceinline unsigned char eval_iv_asm(
 	return VSMIN(a_bc, min_ab_ac);
 }
 
-void IT::C_EvalIV_YV12(IScriptEnvironment * env, int n, const VSFrameRef * ref, long & counter, long & counterp) {
+__forceinline unsigned char _mm_subs_abs_epu8(unsigned char a, unsigned char b) {
+	return a > b ? a - b : b - a;
+}
+
+void IT::EvalIV_YV12(IScriptEnvironment * env, int n, const VSFrameRef * ref, long & counter, long & counterp) {
 	const VSFrameRef * srcC = env->GetFrame(clipFrame(n));
 
 	auto th = 40;
 	auto th2 = 6;
 
-	SSE_MakeDEmap_YV12(env, ref, 1);
+	MakeDEmap_YV12(env, ref, 1);
 
 	const int widthminus16 = (width - 16) >> 1;
 	int sum = 0, sum2 = 0;
@@ -120,11 +126,10 @@ __forceinline unsigned char make_de_map_asm(
 	auto b = ebx[i * step + offset];
 	auto c = ecx[i * step + offset];
 	auto bc = (b + c + 1) >> 1;
-	auto delta = a - bc;
-	return static_cast<unsigned char>(delta >= 0 ? delta : -delta);
+	return _mm_subs_abs_epu8(a, bc);
 }
 
-void IT::C_MakeDEmap_YV12(IScriptEnvironment * env, const VSFrameRef * ref, int offset) {
+void IT::MakeDEmap_YV12(IScriptEnvironment * env, const VSFrameRef * ref, int offset) {
 	const int twidth = width >> 1;
 
 	for (int yy = 0; yy < height; yy += 2) {
@@ -153,7 +158,7 @@ void IT::C_MakeDEmap_YV12(IScriptEnvironment * env, const VSFrameRef * ref, int 
 	}
 }
 
-void IT::C_MakeMotionMap_YV12(IScriptEnvironment * env, int n, bool flag) {
+void IT::MakeMotionMap_YV12(IScriptEnvironment * env, int n, bool flag) {
 	n = clipFrame(n);
 	if (flag == false && env->m_frameInfo[n].diffP0 >= 0)
 		return;
@@ -219,33 +224,30 @@ void IT::C_MakeMotionMap_YV12(IScriptEnvironment * env, int n, bool flag) {
 }
 
 __forceinline unsigned char make_motion_map2_asm(
-	const unsigned char* eax,
-	const unsigned char* ebx,
+	const unsigned char * eax,
+	const unsigned char * ebx,
 	int i) {
-	auto a = eax[i];
-	auto b = ebx[i];
-	return a > b ? a - b : b - a;
+	return _mm_subs_abs_epu8(eax[i], ebx[i]);
 }
 
-void IT::C_MakeMotionMap2Max_YV12(IScriptEnvironment*env, int n)
-{
+void IT::MakeMotionMap2Max_YV12(IScriptEnvironment * env, int n) {
 	const int twidth = width >> 1;
 
-	const VSFrameRef* srcP = env->GetFrame(n - 1);
-	const VSFrameRef* srcC = env->GetFrame(n);
-	const VSFrameRef* srcN = env->GetFrame(n + 1);
+	const VSFrameRef * srcP = env->GetFrame(n - 1);
+	const VSFrameRef * srcC = env->GetFrame(n);
+	const VSFrameRef * srcN = env->GetFrame(n + 1);
 
 	for (int y = 0; y < height; y++) {
-		unsigned char *pD = env->m_motionMap4DIMax + y * width;
-		const unsigned char *pC = env->SYP(srcC, y);
-		const unsigned char *pP = env->SYP(srcP, y);
-		const unsigned char *pN = env->SYP(srcN, y);
-		const unsigned char *pC_U = env->SYP(srcC, y, 1);
-		const unsigned char *pP_U = env->SYP(srcP, y, 1);
-		const unsigned char *pN_U = env->SYP(srcN, y, 1);
-		const unsigned char *pC_V = env->SYP(srcC, y, 2);
-		const unsigned char *pP_V = env->SYP(srcP, y, 2);
-		const unsigned char *pN_V = env->SYP(srcN, y, 2);
+		unsigned char * pD = env->m_motionMap4DIMax + y * width;
+		const unsigned char * pC = env->SYP(srcC, y);
+		const unsigned char * pP = env->SYP(srcP, y);
+		const unsigned char * pN = env->SYP(srcN, y);
+		const unsigned char * pC_U = env->SYP(srcC, y, 1);
+		const unsigned char * pP_U = env->SYP(srcP, y, 1);
+		const unsigned char * pN_U = env->SYP(srcN, y, 1);
+		const unsigned char * pC_V = env->SYP(srcC, y, 2);
+		const unsigned char * pP_V = env->SYP(srcP, y, 2);
+		const unsigned char * pN_V = env->SYP(srcN, y, 2);
 
 		for (int i = 0; i < twidth; i++) {
 			///P
@@ -275,3 +277,52 @@ void IT::C_MakeMotionMap2Max_YV12(IScriptEnvironment*env, int n)
 	env->FreeFrame(srcN);
 }
 
+void IT::MakeSimpleBlurMap_YV12(IScriptEnvironment * env, int n) {
+	int twidth = width;
+	const VSFrameRef * srcC = env->GetFrame(n);
+	const VSFrameRef * srcR;
+	switch (toupper(env->m_iUseFrame)) {
+		default:
+		case 'C':
+			srcR = srcC;
+			break;
+		case 'P':
+			srcR = env->GetFrame(n - 1);
+			break;
+		case 'N':
+			srcR = env->GetFrame(n + 1);
+			break;
+	}
+	const unsigned char * pT;
+	const unsigned char * pC;
+	const unsigned char * pB;
+	for (int y = 0; y < height; y++) {
+		unsigned char * pD = env->m_motionMap4DI + y * width;
+		if (y % 2) {
+			pT = env->SYP(srcC, y - 1);
+			pC = env->SYP(srcR, y);
+			pB = env->SYP(srcC, y + 1);
+		}
+		else {
+			pT = env->SYP(srcR, y - 1);
+			pC = env->SYP(srcC, y);
+			pB = env->SYP(srcR, y + 1);
+		}
+		for (int i = 0; i < twidth; i++) {
+			auto c = pC[i];
+			auto t = pT[i];
+			auto b = pB[i];
+			auto ct = _mm_subs_abs_epu8(c, t);
+			auto cb = _mm_subs_abs_epu8(c, b);
+			auto tb = _mm_subs_abs_epu8(t, b);
+			int delta = ct;
+			delta = VSMIN(255, delta + cb);
+			delta = VSMAX(0, delta - tb - tb);
+			pD[i] = static_cast<unsigned char>(delta);
+		}
+	}
+	if (srcC != srcR)
+		env->FreeFrame(srcR);
+	env->FreeFrame(srcC);
+}
+#endif
