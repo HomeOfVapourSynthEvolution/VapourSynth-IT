@@ -31,10 +31,10 @@ __forceinline __m128i _mm_subs_abs_epu8(__m128i a, __m128i b) {
 }
 
 __forceinline int _mm_sum_epu8(__m128i source) {
-	auto dest = _mm_sad_epu8(source, zero);
-	dest = _mm_hadd_epi32(dest, zero);
-	dest = _mm_hadd_epi32(dest, zero);
-	return _mm_cvtsi128_si32(dest);
+	auto sum = _mm_sad_epu8(source, zero);
+	ALIGNED_ARRAY(unsigned int dest[4], 16);
+	_mm_store_si128(reinterpret_cast<__m128i*>(dest), sum);
+	return dest[0] + dest[2];
 }
 
 __forceinline __m128i _mm_cmpge_cnt_epu8(__m128i source, __m128i threshold) {
