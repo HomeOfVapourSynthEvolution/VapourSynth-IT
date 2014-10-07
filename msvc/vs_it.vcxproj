@@ -85,17 +85,17 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="vs_it_c.cpp" />
-    <ClCompile Include="vs_it.cpp" />
-    <ClCompile Include="vs_it_interface.cpp" />
-    <ClCompile Include="vs_it_mmx.cpp" />
-    <ClCompile Include="vs_it_process.cpp" />
-    <ClCompile Include="vs_it_sse.cpp" />
+    <ClCompile Include="../src/vs_it_c.cpp" />
+    <ClCompile Include="../src/vs_it.cpp" />
+    <ClCompile Include="../src/vs_it_interface.cpp" />
+    <ClCompile Include="../src/vs_it_mmx.cpp" />
+    <ClCompile Include="../src/vs_it_process.cpp" />
+    <ClCompile Include="../src/vs_it_sse.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="IScriptEnvironment.h" />
-    <ClInclude Include="vs_it.h" />
-    <ClInclude Include="vs_it_interface.h" />
+    <ClInclude Include="../src/IScriptEnvironment.h" />
+    <ClInclude Include="../src/vs_it.h" />
+    <ClInclude Include="../src/vs_it_interface.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
