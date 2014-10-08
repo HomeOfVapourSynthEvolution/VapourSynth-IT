@@ -40,7 +40,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301, USA
 
 #define PARAM_INT(name, def) int name = int64ToIntS(vsapi->propGetInt(in, #name, 0, &err)); if (err) { name = def; }
 
-#define IT_VERSION "0103." "1.0"
+#define IT_VERSION "0103." "1.1"
 
 #include "IScriptEnvironment.h"
 #include "vs_it.h"
