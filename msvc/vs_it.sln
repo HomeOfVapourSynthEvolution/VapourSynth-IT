@@ -7,19 +7,50 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "vs_it", "vs_it.vcxproj", "{
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Debug|Win32 = Debug|Win32
-		Release|Win32 = Release|Win32
+		Debug MMX|x64 = Debug MMX|x64
+		Debug MMX|x86 = Debug MMX|x86
+		Debug SSE|x64 = Debug SSE|x64
+		Debug SSE|x86 = Debug SSE|x86
+		Debug SSE-clang|x64 = Debug SSE-clang|x64
+		Debug SSE-clang|x86 = Debug SSE-clang|x86
+		Release C-clang|x64 = Release C-clang|x64
+		Release C-clang|x86 = Release C-clang|x86
+		Release MMX|x64 = Release MMX|x64
+		Release MMX|x86 = Release MMX|x86
+		Release SSE|x64 = Release SSE|x64
+		Release SSE|x86 = Release SSE|x86
+		Release SSE-clang|x64 = Release SSE-clang|x64
+		Release SSE-clang|x86 = Release SSE-clang|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{296F3E49-8C9B-47E2-BF8A-B1EDD6A322CB}.Debug|Win32.ActiveCfg = Debug|Win32
-		{296F3E49-8C9B-47E2-BF8A-B1EDD6A322CB}.Debug|Win32.Build.0 = Debug|Win32
-		{296F3E49-8C9B-47E2-BF8A-B1EDD6A322CB}.Release|Win32.ActiveCfg = Release|Win32
-		{296F3E49-8C9B-47E2-BF8A-B1EDD6A322CB}.Release|Win32.Build.0 = Release|Win32
+		{296F3E49-8C9B-47E2-BF8A-B1EDD6A322CB}.Debug MMX|x64.ActiveCfg = Debug MMX|x64
+		{296F3E49-8C9B-47E2-BF8A-B1EDD6A322CB}.Debug MMX|x86.ActiveCfg = Debug MMX|Win32
+		{296F3E49-8C9B-47E2-BF8A-B1EDD6A322CB}.Debug MMX|x86.Build.0 = Debug MMX|Win32
+		{296F3E49-8C9B-47E2-BF8A-B1EDD6A322CB}.Debug SSE|x64.ActiveCfg = Debug SSE|x64
+		{296F3E49-8C9B-47E2-BF8A-B1EDD6A322CB}.Debug SSE|x64.Build.0 = Debug SSE|x64
+		{296F3E49-8C9B-47E2-BF8A-B1EDD6A322CB}.Debug SSE|x86.ActiveCfg = Debug SSE|Win32
+		{296F3E49-8C9B-47E2-BF8A-B1EDD6A322CB}.Debug SSE|x86.Build.0 = Debug SSE|Win32
+		{296F3E49-8C9B-47E2-BF8A-B1EDD6A322CB}.Debug SSE-clang|x64.ActiveCfg = Debug SSE-clang|x64
+		{296F3E49-8C9B-47E2-BF8A-B1EDD6A322CB}.Debug SSE-clang|x64.Build.0 = Debug SSE-clang|x64
+		{296F3E49-8C9B-47E2-BF8A-B1EDD6A322CB}.Debug SSE-clang|x86.ActiveCfg = Debug SSE-clang|Win32
+		{296F3E49-8C9B-47E2-BF8A-B1EDD6A322CB}.Debug SSE-clang|x86.Build.0 = Debug SSE-clang|Win32
+		{296F3E49-8C9B-47E2-BF8A-B1EDD6A322CB}.Release C-clang|x64.ActiveCfg = Release C-clang|x64
+		{296F3E49-8C9B-47E2-BF8A-B1EDD6A322CB}.Release C-clang|x64.Build.0 = Release C-clang|x64
+		{296F3E49-8C9B-47E2-BF8A-B1EDD6A322CB}.Release C-clang|x86.ActiveCfg = Release C-clang|Win32
+		{296F3E49-8C9B-47E2-BF8A-B1EDD6A322CB}.Release C-clang|x86.Build.0 = Release C-clang|Win32
+		{296F3E49-8C9B-47E2-BF8A-B1EDD6A322CB}.Release MMX|x64.ActiveCfg = Release MMX|x64
+		{296F3E49-8C9B-47E2-BF8A-B1EDD6A322CB}.Release MMX|x86.ActiveCfg = Release MMX|Win32
+		{296F3E49-8C9B-47E2-BF8A-B1EDD6A322CB}.Release MMX|x86.Build.0 = Release MMX|Win32
+		{296F3E49-8C9B-47E2-BF8A-B1EDD6A322CB}.Release SSE|x64.ActiveCfg = Release SSE|x64
+		{296F3E49-8C9B-47E2-BF8A-B1EDD6A322CB}.Release SSE|x64.Build.0 = Release SSE|x64
+		{296F3E49-8C9B-47E2-BF8A-B1EDD6A322CB}.Release SSE|x86.ActiveCfg = Release SSE|Win32
+		{296F3E49-8C9B-47E2-BF8A-B1EDD6A322CB}.Release SSE|x86.Build.0 = Release SSE|Win32
+		{296F3E49-8C9B-47E2-BF8A-B1EDD6A322CB}.Release SSE-clang|x64.ActiveCfg = Release SSE-clang|x64
+		{296F3E49-8C9B-47E2-BF8A-B1EDD6A322CB}.Release SSE-clang|x64.Build.0 = Release SSE-clang|x64
+		{296F3E49-8C9B-47E2-BF8A-B1EDD6A322CB}.Release SSE-clang|x86.ActiveCfg = Release SSE-clang|Win32
+		{296F3E49-8C9B-47E2-BF8A-B1EDD6A322CB}.Release SSE-clang|x86.Build.0 = Release SSE-clang|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(Performance) = preSolution
-		HasPerformanceSessions = true
 	EndGlobalSection
 EndGlobal

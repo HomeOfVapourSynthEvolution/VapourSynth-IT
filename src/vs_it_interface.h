@@ -34,6 +34,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301, USA
 #include <x86intrin.h>
 #define __forceinline inline
 #define ALIGNED_ARRAY(decl, alignment) __attribute__((aligned(alignment))) decl
+#define _aligned_malloc(decl, alignment) aligned_alloc(alignment, decl)
+#define _aligned_free(buffer) free(buffer)
 #endif
 
 #define PARAM_INT(name, def) int name = int64ToIntS(vsapi->propGetInt(in, #name, 0, &err)); if (err) { name = def; }

@@ -27,7 +27,8 @@ void VS_CC itInit(VSMap * in, VSMap * out, void ** instanceData, VSNode * node, 
 
 void VS_CC itFree(void * instanceData, VSCore * core, const VSAPI * vsapi) {
 	INSTANCE * d = static_cast<INSTANCE*>(instanceData);
-	vsapi->freeNode(d->node);
+	// This can cause deadlock under Linux. FIXME
+	// vsapi->freeNode(d->node);
 	delete d;
 }
 

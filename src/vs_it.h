@@ -22,10 +22,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301, USA
 const int MAX_WIDTH = 8192;
 
 class IT {
-	int m_iPThreshold;
-	int m_iThreshold;
-	int m_iCounter;
 	int m_iFPS;
+	int m_iThreshold;
+	int m_iPThreshold;
+	int m_iCounter;
 
 	int width;
 	int height;

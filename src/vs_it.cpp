@@ -19,11 +19,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301, USA
 #include "vs_it.h"
 
 IT::IT(VSVideoInfo * vi, VSNodeRef * node, int _fps, int _threshold, int _pthreshold, const VSAPI * vsapi) :
-	vi(vi),
-	node(node),
 	m_iFPS(_fps),
 	m_iThreshold(_threshold),
-	m_iPThreshold(_pthreshold) {
+	m_iPThreshold(_pthreshold),
+	vi(vi),
+	node(node) {
 	m_iMaxFrames = vi->numFrames;
 	m_iCounter = 0;
 	width = vi->width;
@@ -74,14 +74,15 @@ void IT::GetFramePre(IScriptEnvironment * env, int n) {
 const VSFrameRef* IT::GetFrame(IScriptEnvironment * env, int n) {
 	++m_iCounter;
 	env->m_iRealFrame = n;
-
-	env->m_edgeMap = new unsigned char[width * height];
+	
+	auto size = width * height;
+	env->m_edgeMap = static_cast<unsigned char*>(_aligned_malloc(size, 16));
 	memset(env->m_edgeMap, 0, width * height);
 
-	env->m_motionMap4DI = new unsigned char[width * height];
+	env->m_motionMap4DI = static_cast<unsigned char*>(_aligned_malloc(size, 16));
 	memset(env->m_motionMap4DI, 0, width * height);
 
-	env->m_motionMap4DIMax = new unsigned char[width * height];
+	env->m_motionMap4DIMax = static_cast<unsigned char*>(_aligned_malloc(size, 16));
 	memset(env->m_motionMap4DIMax, 0, width * height);
 
 	int tfFrame;
@@ -118,9 +119,9 @@ const VSFrameRef* IT::GetFrame(IScriptEnvironment * env, int n) {
 	}
 	VSFrameRef * dst = env->NewVideoFrame(vi);
 	MakeOutput(env, dst, n);
-	delete[] env->m_edgeMap;
-	delete[] env->m_motionMap4DI;
-	delete[] env->m_motionMap4DIMax;
+	_aligned_free(env->m_edgeMap);
+	_aligned_free(env->m_motionMap4DI);
+	_aligned_free(env->m_motionMap4DIMax);
 	return dst;
 }
 
