@@ -92,7 +92,7 @@ LIBNAME=""
 
 CXXFLAGS="-std=c++11 -Wall -I. -I$SRCDIR/src"
 LDFLAGS=""
-SOFLAGS="-shared -Wl,-Bsymbolic"
+SOFLAGS="-shared"
 OPTFLAGS="-D__SSE"
 TARGET="-mssse3"
 
